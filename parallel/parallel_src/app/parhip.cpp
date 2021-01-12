@@ -187,16 +187,15 @@ int main(int argn, char **argv) {
                 distributed_partitioner dpart;
                 distributed_quality_metrics qm;
 
-		    
-		try{
-		  //qm = dpart.perform_partitioning( communicator, partition_config, G, PEtree);
-		  dpart.perform_partitioning( communicator, partition_config, G, qm, PEtree);
-		} 
-		catch (std::bad_alloc & exception) 
-		  { 
-		    std::cerr << " !!! bad_alloc detected: " << exception.what(); 
-		  } 
-		
+                try{
+                        //qm = dpart.perform_partitioning( communicator, partition_config, G, PEtree);
+                        dpart.perform_partitioning( communicator, partition_config, G, qm, PEtree);
+                } 
+                catch (std::bad_alloc & exception) 
+                { 
+                        std::cerr << " !!! bad_alloc detected: " << exception.what(); 
+                } 
+
                 MPI_Barrier(communicator);
                 double running_time = t.elapsed();
 
