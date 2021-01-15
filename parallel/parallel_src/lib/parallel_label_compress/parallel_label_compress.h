@@ -86,7 +86,7 @@ class parallel_label_compress {
                                         updateSize = std::max( int (config.update_step_size/(config.label_iterations-i)), 1 );
                                 }
                                 if(rank==ROOT){
-                                     std::cout << "log> level " << i << ", will update ghost nodes every " << updateSize << " seen nodes" << std::endl;
+                                //        std::cout << "log> level " << i << ", will update ghost nodes every " << updateSize << " seen nodes" << std::endl;
                                 }
 
 

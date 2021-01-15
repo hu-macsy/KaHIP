@@ -34,7 +34,7 @@ public:
 protected:
         balance_management() {};
         parallel_graph_access * m_G;
-        NodeID  m_total_num_labels;
+        NodeID  m_total_num_labels = 0;
 
 };
 

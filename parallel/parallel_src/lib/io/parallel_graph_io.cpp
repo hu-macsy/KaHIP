@@ -63,10 +63,6 @@ int parallel_graph_io::readGraphWeightedFlexible(parallel_graph_access & G,
                                                  PEID peID, PEID comm_size, MPI_Comm communicator) {
         std::string line;
 
-
-	// int rank, size;
-        // MPI_Comm_rank( communicator, &rank);
-	
         // open file for reading
         std::ifstream in(filename.c_str());
         if (!in) {

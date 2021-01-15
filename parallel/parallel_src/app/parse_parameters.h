@@ -35,7 +35,7 @@ int parse_parameters(int argn, char **argv,
         struct arg_int *k_opt                          = arg_int0(NULL, "k", NULL, "Number of blocks to partition the graph.");
         struct arg_int *inbalance                      = arg_int0(NULL, "imbalance", NULL, "Desired balance. Default: 3 (%).");
         struct arg_int *comm_rounds                    = arg_int0(NULL, "comm_rounds", NULL, "Number of communication rounds per complete graph iteration.");
-        struct arg_dbl *cluster_coarsening_factor      = arg_dbl0(NULL, "cluster_coarsening_factor", NULL, "The coarsening factor basically involes a bound on the block weights.");
+        struct arg_dbl *cluster_coarsening_factor      = arg_dbl0(NULL, "cluster_coarsening_factor", NULL, "The coarsening factor basically involves a bound on the block weights.");
         struct arg_int *stop_factor                    = arg_int0(NULL, "stop_factor", NULL, "Stop factor l to stop coarsening if total num vert <= lk.");
         struct arg_int *evolutionary_time_limit        = arg_int0(NULL, "evolutionary_time_limit", NULL, "Time limit for the evolutionary algorithm.");
 #ifndef TOOLBOX

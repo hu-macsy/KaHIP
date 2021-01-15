@@ -229,7 +229,7 @@ int main(int argn, char **argv) {
                         std::cout << "log> initial qap  " <<  qm.get_initial_qap()  << std::endl;
                         std::cout << "log> final qap  " <<  qap  << std::endl;
                         std::cout << "log> final balance "  <<  balance   << std::endl;
-			std::cout << "log> max congestion " <<  qm.get_max_congestion() << std::endl;
+                        std::cout << "log> max congestion " <<  qm.get_max_congestion() << std::endl;
                         std::cout << "log> max dilation " <<  qm.get_max_dilation() << std::endl;
                         std::cout << "log> sum dilation " <<  qm.get_sum_dilation() << std::endl;
                         std::cout << "log> avg dilation  " << qm.get_avg_dilation()  << std::endl;
