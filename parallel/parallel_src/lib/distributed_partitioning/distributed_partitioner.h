@@ -22,7 +22,6 @@ public:
         virtual ~distributed_partitioner();
 
         void perform_partitioning( PPartitionConfig & config, parallel_graph_access & G);
-        void perform_recursive_partitioning( PPartitionConfig & config, parallel_graph_access & G);
 
         distributed_quality_metrics perform_partitioning( MPI_Comm comm, PPartitionConfig & partition_config, parallel_graph_access & G, distributed_quality_metrics & qm, const processor_tree & PEtree = processor_tree());
 
@@ -33,25 +32,20 @@ public:
             return perform_partitioning( MPI_COMM_WORLD, partition_config, G, qm);
         }
         
-        void perform_recursive_partitioning( MPI_Comm comm, PPartitionConfig & partition_config, parallel_graph_access & G);
+        //void perform_recursive_partitioning( PPartitionConfig & config, parallel_graph_access & G);
+        //void perform_recursive_partitioning( MPI_Comm comm, PPartitionConfig & partition_config, parallel_graph_access & G);
 
         void check( MPI_Comm comm, PPartitionConfig & config, parallel_graph_access & G);
         void check_labels( MPI_Comm comm, PPartitionConfig & config, parallel_graph_access & G);
         static void generate_random_choices( PPartitionConfig & config ) ;
 private: 
         void vcycle( MPI_Comm communicator, PPartitionConfig & config,
-		     parallel_graph_access & G,
-		     distributed_quality_metrics & qm ,
-		     const  processor_tree & PEtree = processor_tree()
-		     );
+             parallel_graph_access & G,
+             distributed_quality_metrics & qm ,
+             const processor_tree & PEtree = processor_tree(),
+             const bool forceNewVcycle = true
+        );
 
-	/* parallel_graph_access & vcycle( MPI_Comm communicator, PPartitionConfig & config, */
-	/* 				parallel_graph_access & G, */
-	/* 				distributed_quality_metrics & qm , */
-	/* 				const  processor_tree & PEtree = processor_tree() */
-	/* 				); */
-
-	
         stop_rule contraction_stop_decision;
         NodeWeight m_total_graph_weight;
         NodeID m_cur_rnd_choice;
