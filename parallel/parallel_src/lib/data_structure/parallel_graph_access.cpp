@@ -27,6 +27,32 @@ parallel_graph_access::parallel_graph_access( MPI_Comm communicator ) : m_num_lo
                 m_gnc->setGraphReference(this);
 }
 
+parallel_graph_access& parallel_graph_access::operator=( parallel_graph_access& G ){
+
+        const NodeID num_local_nodes = G.number_of_local_nodes();
+        const NodeID num_local_edges = G.number_of_local_edges();
+        const NodeID num_global_nodes = G.number_of_global_nodes();
+        const NodeID num_global_edges= G.number_of_global_edges();
+
+        start_construction(num_local_nodes, num_local_edges, num_global_nodes, num_global_edges );
+
+        m_num_local_nodes = num_local_nodes;
+        set_range( G.get_from_range(), G.get_to_range() );
+        set_range_array( G.get_range_array() ); 
+        m_num_ghost_nodes = G.number_of_ghost_nodes();
+        m_max_node_degree = G.get_max_degree();
+        //m_bm = 
+        m_communicator = G.getCommunicator();
+        MPI_Comm_rank( m_communicator, &rank);
+        MPI_Comm_size( m_communicator, &size);
+        
+        m_gnc = new ghost_node_communication(m_communicator);
+        m_gnc->setGraphReference(this);
+        finish_construction();
+
+        return *this;
+};
+
 parallel_graph_access::~parallel_graph_access() {
         m_comm_rounds = std::min(m_comm_rounds, m_comm_rounds_up); 
         delete m_gnc;

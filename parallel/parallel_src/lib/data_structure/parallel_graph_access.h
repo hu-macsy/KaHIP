@@ -201,6 +201,8 @@ public:
 
         parallel_graph_access( MPI_Comm communicator );
 
+        parallel_graph_access& operator=( parallel_graph_access& G );
+
         virtual ~parallel_graph_access();
 
         /* ============================================================= */
@@ -217,7 +219,7 @@ public:
                 m_global_m                   = global_m;
                 m_ghost_adddata_array_offset = n+1;
                 m_bm                         = NULL;
-		m_cur_degree                 = 0;
+                m_cur_degree                 = 0;
 
                 //resizes property arrays
                 m_nodes.resize(n+1);
@@ -323,7 +325,7 @@ public:
                                 m_gnc->add_adjacent_processor(add_data.peID);
                         }
                 }
-		
+
                 EdgeID e_bar = e;
                 ++e;
 
@@ -337,11 +339,11 @@ public:
                         }
                 }
                 m_last_source = source;
-		m_cur_degree++;
+                m_cur_degree++;
 
-		if( m_cur_degree > m_max_node_degree ) {
-			m_max_node_degree = m_cur_degree;
-		}
+                if( m_cur_degree > m_max_node_degree ) {
+                        m_max_node_degree = m_cur_degree;
+                }
                 return e_bar;
         };
 
@@ -361,9 +363,9 @@ public:
                 m_gnc->init();
         };
 
-	NodeID get_max_degree() {
-		return m_max_node_degree;
-	}
+        NodeID get_max_degree() {
+                return m_max_node_degree;
+        }  
         /* ============================================================= */
         /* methods handeling balance */
         /* ============================================================= */
@@ -500,6 +502,7 @@ public:
         }
 
         void reinit();
+
         /* ============================================================= */
         /* parallel graph data structure  */
         /* ============================================================= */
@@ -544,8 +547,8 @@ private:
         static ULONG m_comm_rounds; // global number of edges
         static ULONG m_comm_rounds_up; // global number of edges
 
-	NodeID m_max_node_degree;
-	NodeID m_cur_degree;
+        NodeID m_max_node_degree;
+        NodeID m_cur_degree;
 
         PEID size;
         PEID rank;
