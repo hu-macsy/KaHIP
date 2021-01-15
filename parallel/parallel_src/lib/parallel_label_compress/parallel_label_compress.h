@@ -162,8 +162,8 @@ class parallel_label_compress {
                                 //
                                 //uncomment to display memory usage
                                 //
-                                //[[maybe_unused]] double myMem;
-                                //getFreeRam(MPI_COMM_WORLD, myMem, true);
+                                [[maybe_unused]] double myMem;
+                                getFreeRam(MPI_COMM_WORLD, myMem, true);
                                 //
 
                         }//for( ULONG i = 0; i < config.label_iterations; i++)
