@@ -274,6 +274,7 @@ void distributed_partitioner::vcycle( MPI_Comm communicator, PPartitionConfig & 
 
                         qm.set_initial_numNodes( new_qm.get_initial_numNodes() );
                         qm.set_initial_numEdges( new_qm.get_initial_numEdges() );
+                        const EdgeWeight new_edge_cut = new_qm.edge_cut( Q, communicator );
 
 #ifndef NOOUTPUT
                         if( rank == ROOT ) {
@@ -282,7 +283,6 @@ void distributed_partitioner::vcycle( MPI_Comm communicator, PPartitionConfig & 
                                 std::cout << "log>" << "\t==\t==\t==\t==\t==\t==" << std::endl;
                         }
 #endif
-                        const EdgeWeight new_edge_cut = new_qm.edge_cut( Q, communicator );
                         
                         if( prev_edge_cut<new_edge_cut ){
                                 #ifndef NOOUTPUT
