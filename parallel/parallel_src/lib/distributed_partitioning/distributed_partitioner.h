@@ -43,7 +43,8 @@ private:
              parallel_graph_access & G,
              distributed_quality_metrics & qm ,
              const processor_tree & PEtree = processor_tree(),
-             const bool forceNewVcycle = true
+             const NodeID coarsest_graph_size_max=1,
+             const bool forceNewVcycle = false
         );
 
         stop_rule contraction_stop_decision;

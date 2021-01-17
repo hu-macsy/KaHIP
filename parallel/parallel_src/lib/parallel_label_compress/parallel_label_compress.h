@@ -86,7 +86,7 @@ class parallel_label_compress {
                                         updateSize = std::max( int (config.update_step_size/(config.label_iterations-i)), 1 );
                                 }
                                 if(rank==ROOT){
-                                //        std::cout << "log> level " << i << ", will update ghost nodes every " << updateSize << " seen nodes" << std::endl;
+                                     std::cout << "log> level " << i << ", will update ghost nodes every " << updateSize << " seen nodes" << std::endl;
                                 }
 
 
@@ -158,7 +158,9 @@ class parallel_label_compress {
                                 //std::cout << "in iteration round " << i << ", we moved " << numChanges << " vertices" <<std::endl;
                                 G.update_ghost_node_data_finish(); 
                                 //std::cout << "updated ghost nodes" << std::endl;
-
+                                //if(rank==ROOT){
+                                //     std::cout << "log> level " << i << ", will update ghost nodes every " << updateSize << " seen nodes" << std::endl;
+                                //}
                                 //
                                 //uncomment to display memory usage
                                 //

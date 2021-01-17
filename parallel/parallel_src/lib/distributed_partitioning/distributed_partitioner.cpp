@@ -43,14 +43,6 @@ void distributed_partitioner::generate_random_choices( PPartitionConfig & config
         }
 }
 
-/*
-void distributed_partitioner::perform_recursive_partitioning( PPartitionConfig & partition_config, parallel_graph_access & G) {
-        perform_partitioning( MPI_COMM_WORLD, partition_config, G);
-}
-
-void distributed_partitioner::perform_recursive_partitioning( MPI_Comm communicator, PPartitionConfig & partition_config, parallel_graph_access & G) {
-}
-*/
 
 void distributed_partitioner::perform_partitioning( PPartitionConfig & partition_config, parallel_graph_access & G) {
         perform_partitioning( MPI_COMM_WORLD, partition_config, G);
@@ -63,6 +55,9 @@ distributed_quality_metrics distributed_partitioner::perform_partitioning( MPI_C
         m_cur_rnd_choice = 0;
         PPartitionConfig config = partition_config;
         config.vcycle = false;
+        //if the coarsest graph has more vertices, we will coarsen further 
+        partition_config.percent_to_force_further_coarsening = 0.01;
+        NodeID coarsest_graph_size_max = G.number_of_global_nodes()*partition_config.percent_to_force_further_coarsening;
 
         PEID rank;
         MPI_Comm_rank( communicator, &rank);
@@ -80,9 +75,12 @@ distributed_quality_metrics distributed_partitioner::perform_partitioning( MPI_C
                 if(cycle+1 == partition_config.num_vcycles && partition_config.no_refinement_in_last_iteration) {
                         config.label_iterations_refinement = 0;
                 }
-
+                
+if( rank == ROOT ) {
+    PRINT(std::cout <<  "log>part: " << cycle << " , coarsest_graph_size_max " << coarsest_graph_size_max << std::endl;)
+}
                 //the core partitioning routine
-                vcycle( communicator, config, G, qm, PEtree, cycle!=0 );
+                vcycle( communicator, config, G, qm, PEtree, coarsest_graph_size_max, cycle!=0 );
 
                 if( rank == ROOT ) {
                         PRINT(std::cout <<  "log>part: " << m_cycle << " qap " << qm.get_initial_qap()  << std::endl;)
@@ -139,7 +137,14 @@ distributed_quality_metrics distributed_partitioner::perform_partitioning( MPI_C
 }
 
 
-void distributed_partitioner::vcycle( MPI_Comm communicator, PPartitionConfig & partition_config, parallel_graph_access & G, distributed_quality_metrics &qm, const processor_tree & PEtree, const bool forceNewVcycle) {
+void distributed_partitioner::vcycle( 
+    MPI_Comm communicator, 
+    PPartitionConfig & partition_config, 
+    parallel_graph_access & G,
+    distributed_quality_metrics &qm, 
+    const processor_tree & PEtree, 
+    const NodeID coarsest_graph_size_max,
+    const bool forceNewVcycle) {
         PPartitionConfig config = partition_config;
         PPartitionConfig config_orig = partition_config;
 
@@ -224,7 +229,7 @@ void distributed_partitioner::vcycle( MPI_Comm communicator, PPartitionConfig & 
                 //
                 // recursively call to coarsen
                 //
-                vcycle( communicator, config, Q, qm, PEtree );
+                vcycle( communicator, config, Q, qm, PEtree, coarsest_graph_size_max, forceNewVcycle );
 
         } else {
                 //----------------------------------------------------
@@ -247,30 +252,38 @@ void distributed_partitioner::vcycle( MPI_Comm communicator, PPartitionConfig & 
 
                 t.restart();
 
-                NodeID MAX_COARSEST_SIZE = G.number_of_global_nodes()*0.1;
-                if( forceNewVcycle && Q.number_of_global_nodes()>MAX_COARSEST_SIZE ){
+                NodeID max_coarsest_size = coarsest_graph_size_max; 
+
+                if( forceNewVcycle && Q.number_of_global_nodes()>max_coarsest_size ){
                         //partition if coarsest graph is too large
 #ifndef NOOUTPUT
                         if( rank == ROOT ) {
                                 std::cout << "log>" << "=====================================" << std::endl;
-                                std::cout << "log>" << "coarsest graph has more than "<< MAX_COARSEST_SIZE << " nodes, will store the partition" << std::endl;
+                                std::cout << "log>" << "coarsest graph has more than "<< max_coarsest_size << " nodes, will store the partition" << std::endl;
                                 std::cout << "log>" << "\t==\t==\t==\t==\t==\t==" << std::endl;
                         }
 #endif
 
                         const NodeID num_local_nodes = Q.number_of_local_nodes();
                         std::vector<PartitionID> prev_partition( num_local_nodes );
-                        const EdgeWeight prev_edge_cut = qm.edge_cut( Q, communicator );
+                        //most likely, in NOT the first round, the second cut (from the previous cycle) is lower
+                        const EdgeWeight prev_edge_cut = std::min( qm.edge_cut(Q, communicator), qm.edge_cut_second(Q, communicator) );
 
                         //store previous partition
                         forall_local_nodes( Q, i ){
                                 prev_partition[i] = Q.getNodeLabel(i);
-                                Q.setNodeLabel( i, 0 ); //TODO: is this needed? check how it behaves without this line
+                                //Q.setSecondPartitionIndex( i, Q.getNodeLabel(i) ); //TODO: is this needed?
+                                Q.setNodeLabel( i, Q.getGlobalID(i) ); //TODO: is this needed? check how it behaves without this line
                         }endfor
+                        forall_ghost_nodes( Q, node ) {
+                                //Q.setSecondPartitionIndex( node, Q.getNodeLabel(node) );
+                                Q.setNodeLabel( node, Q.getGlobalID(node) );
+                        } endfor                  
 
                         distributed_quality_metrics new_qm;
                         //config_orig.stop_factor = 5000; //TODO: try different parameter combinations
-                        vcycle( communicator, config_orig, Q, new_qm, PEtree, false );
+                        //TODO: experiment with setting the forceNewVcycle to true
+                        vcycle( communicator, config_orig, Q, new_qm, PEtree, max_coarsest_size, false );
 
                         qm.set_initial_numNodes( new_qm.get_initial_numNodes() );
                         qm.set_initial_numEdges( new_qm.get_initial_numEdges() );
