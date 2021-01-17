@@ -89,6 +89,11 @@ struct PPartitionConfig
         int num_vcycles;
 
         int num_tries; // number of repetitions to perform
+        
+        //a percentage of vertex of the starting graph. If the coarsest graph before IP has more than this number of
+        //vertices (it is too big) we force more coarsening rounds to reduce its size
+        //if 1, no further is performed
+        double percent_to_force_further_coarsening = 0.1;
 
         NodeOrderingType node_ordering;
 
