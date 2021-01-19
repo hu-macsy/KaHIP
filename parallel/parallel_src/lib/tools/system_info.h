@@ -1,5 +1,5 @@
 /******************************************************************************
- * distributed_quality_metrics.h
+ * system_info.h
  * *
  * Source of KaHIP -- Karlsruhe High Quality Partitioning.
  * Christian Schulz <christian.schulz.phone@gmail.com>
@@ -20,6 +20,7 @@
 
 //taken from 
 //https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process
+inline
 unsigned long long getFreeRam(const MPI_Comm communicator, double& myMem, bool printMessage=false){
 
     struct sysinfo memInfo;

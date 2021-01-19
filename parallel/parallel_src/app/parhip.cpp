@@ -135,7 +135,7 @@ int main(int argn, char **argv) {
                 parallel_graph_access::set_comm_rounds_up( partition_config.comm_rounds/size);
                 distributed_partitioner::generate_random_choices( partition_config );
 
-G.printMemoryUsage(std::cout);
+                //G.printMemoryUsage(std::cout);
 
                 //compute some stats
                 EdgeWeight interPEedges = 0;

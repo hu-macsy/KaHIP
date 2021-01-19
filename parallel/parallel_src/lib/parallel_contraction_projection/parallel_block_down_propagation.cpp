@@ -32,7 +32,6 @@ void parallel_block_down_propagation::propagate_block_down( MPI_Comm communicato
         MPI_Comm_size( communicator, &size);
         
         NodeID divisor          = ceil( Q.number_of_global_nodes()/(double)size);
-
         m_messages.resize(size);
 
         //now distribute the block idw

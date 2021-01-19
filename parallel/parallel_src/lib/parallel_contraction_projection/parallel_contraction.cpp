@@ -9,6 +9,8 @@
 #include "data_structure/hashed_graph.h"
 #include "tools/helpers.h"
 
+#include "system_info.h"
+
 parallel_contraction::parallel_contraction() {
                 
 }
@@ -51,8 +53,14 @@ void parallel_contraction::contract_to_distributed_quotient( MPI_Comm communicat
         std::vector< std::vector< NodeID > >(m_out_messages).swap(m_out_messages);
         m_send_buffers.resize(0); 
         std::vector< std::vector< NodeID > >(m_send_buffers).swap(m_send_buffers);
-
+PEID rank;
+MPI_Comm_rank( communicator, &rank);
+[[maybe_unused]] double myMem;
+if( rank == ROOT ) std::cout<< __LINE__ << ", inside contract_to_distributed_quotient(), label_mapping.size "<< label_mapping.size() << std::endl;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
         redistribute_hased_graph_and_build_graph_locally( communicator, hG, node_weights, number_of_distinct_labels, Q );
+if( rank == ROOT ) std::cout<< __LINE__ << ", inside contract_to_distributed_quotient()" << std::endl;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
         update_ghost_nodes_weights( communicator, Q );
 }
 
@@ -345,6 +353,14 @@ void parallel_contraction::redistribute_hased_graph_and_build_graph_locally( MPI
         //std::vector< std::vector< NodeID > >  messages;
         m_messages.resize(size);
 
+[[maybe_unused]] double myMem;
+{
+unsigned long long maxHGsize;
+unsigned long long hgSize = hG.size();
+MPI_Reduce( &hgSize, &maxHGsize, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, MPI_COMM_WORLD );
+if( rank == ROOT ) std::cout<< __LINE__ << "," << rank <<": inside redistribute_hased_graph_and_build_graph_locally(), max hG.size()= " << maxHGsize << std::endl;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
+}
         //build messages
         hashed_graph::iterator it;
         for( it = hG.begin(); it != hG.end(); it++) {
@@ -352,6 +368,7 @@ void parallel_contraction::redistribute_hased_graph_and_build_graph_locally( MPI
                 hashed_edge he       = it->first;
 
                 PEID peID = he.source / divisor;
+assert(peID<size);
                 m_messages[ peID ].push_back( he.source );
                 m_messages[ peID ].push_back( he.target );
                 m_messages[ peID ].push_back( e.weight );
@@ -361,7 +378,8 @@ void parallel_contraction::redistribute_hased_graph_and_build_graph_locally( MPI
                 m_messages[ peID ].push_back( he.source );
                 m_messages[ peID ].push_back( e.weight );
         }
-
+if( rank == ROOT ) std::cout<< __LINE__ << ", redistribute_hased_graph_and_build_graph_locally() after for loop" << std::endl;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
         // now flood the network
         for( PEID peID = 0; peID < size; peID++) {
                 if( peID != rank ) {
@@ -390,7 +408,8 @@ void parallel_contraction::redistribute_hased_graph_and_build_graph_locally( MPI
                         //std::cout <<  local_graph[he].weight  << std::endl;
                 }
         }
-
+if( rank == ROOT ) std::cout<< __LINE__ << ", inside redistribute_hased_graph_and_build_graph_locally() local_graph,size()= "<< local_graph.size() << std::endl;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
         PEID counter = 0;
         while( counter < size - 1) {
                 // wait for incomming message of an adjacent processor
@@ -424,7 +443,8 @@ void parallel_contraction::redistribute_hased_graph_and_build_graph_locally( MPI
         from = std::min(from, number_of_cnodes);
         to   = std::min(to, number_of_cnodes - 1);
         ULONG local_num_cnodes = to - from + 1;
-
+if( rank == ROOT ) std::cout<< __LINE__ << ", inside redistribute_hased_graph_and_build_graph_locally(), local_num_cnodes= " << local_num_cnodes << std::endl;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
         std::vector < std::vector< std::pair<NodeID, NodeWeight > > > sorted_graph;
         sorted_graph.resize( local_num_cnodes );
 
@@ -456,7 +476,8 @@ void parallel_contraction::redistribute_hased_graph_and_build_graph_locally( MPI
  
         ULONG global_edges = 0;
         MPI_Allreduce(&edge_counter, &global_edges, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, communicator);
-
+if( rank == ROOT ) std::cout<< __LINE__ << ", "<< rank << ": inside redistribute_hased_graph_and_build_graph_locally(), global_edges= " << global_edges << std::endl;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
         Q.start_construction(local_num_cnodes, edge_counter, number_of_cnodes, global_edges);
         Q.set_range(from, to);
 
@@ -510,7 +531,14 @@ void parallel_contraction::redistribute_hased_graph_and_build_graph_locally( MPI
                                     peID, peID+8*size, communicator, &rq);
                 }
         }
-
+unsigned long long msgSize =0;
+for( auto x:m_messages ){
+    msgSize += x.size();
+}
+unsigned long long maxMsgSize;
+MPI_Reduce( &msgSize, &maxMsgSize, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, MPI_COMM_WORLD );
+if( rank == ROOT ) std::cout<< __LINE__ << ", inside redistribute_hased_graph_and_build_graph_locally(), max m_messages_size= " << maxMsgSize << std::endl;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
         if( m_messages[ rank ].size() != 0 ) {
                 for( ULONG i = 0; i < m_messages[rank].size()-1; i+=2) {
                         NodeID globalID   = m_messages[rank][i];
