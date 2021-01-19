@@ -23,7 +23,7 @@ public:
 
         void perform_partitioning( PPartitionConfig & config, parallel_graph_access & G);
 
-        distributed_quality_metrics perform_partitioning( MPI_Comm comm, PPartitionConfig & partition_config, parallel_graph_access & G, distributed_quality_metrics & qm, const processor_tree & PEtree = processor_tree());
+        distributed_quality_metrics perform_partitioning( MPI_Comm comm, PPartitionConfig & partition_config, parallel_graph_access & G, distributed_quality_metrics & qm, const processor_tree & PEtree = processor_tree() );
 
         //overload without quality metrics
         distributed_quality_metrics perform_partitioning( MPI_Comm comm, PPartitionConfig & partition_config, parallel_graph_access & G, const processor_tree & PEtree = processor_tree())
@@ -45,6 +45,15 @@ private:
              const processor_tree & PEtree = processor_tree(),
              const NodeID coarsest_graph_size_max=1,
              const bool forceNewVcycle = false
+        );
+
+        void further_coarsen( 
+            MPI_Comm communicator,
+            PEID rank,
+            PPartitionConfig config,
+            parallel_graph_access & Q,
+            distributed_quality_metrics & qm,
+            const processor_tree & PEtree = processor_tree()
         );
 
         stop_rule contraction_stop_decision;

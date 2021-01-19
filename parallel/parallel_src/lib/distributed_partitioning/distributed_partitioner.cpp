@@ -259,53 +259,13 @@ void distributed_partitioner::vcycle(
 #ifndef NOOUTPUT
                         if( rank == ROOT ) {
                                 std::cout << "log>" << "=====================================" << std::endl;
-                                std::cout << "log>" << "coarsest graph has more than "<< max_coarsest_size << " nodes, will store the partition" << std::endl;
+                                std::cout << "log>" << "coarsest graph has "<< Q.number_of_global_nodes() << " that is more than "<< max_coarsest_size << " nodes, will store the partition" << std::endl;
                                 std::cout << "log>" << "\t==\t==\t==\t==\t==\t==" << std::endl;
                         }
 #endif
 
-                        const NodeID num_local_nodes = Q.number_of_local_nodes();
-                        std::vector<PartitionID> prev_partition( num_local_nodes );
-                        //most likely, in NOT the first round, the second cut (from the previous cycle) is lower
-                        const EdgeWeight prev_edge_cut = std::min( qm.edge_cut(Q, communicator), qm.edge_cut_second(Q, communicator) );
+                        further_coarsen( communicator, rank, config_orig, Q, qm, PEtree );
 
-                        //store previous partition
-                        forall_local_nodes( Q, i ){
-                                prev_partition[i] = Q.getNodeLabel(i);
-                                //Q.setSecondPartitionIndex( i, Q.getNodeLabel(i) ); //TODO: is this needed?
-                                Q.setNodeLabel( i, Q.getGlobalID(i) ); //TODO: is this needed? check how it behaves without this line
-                        }endfor
-                        forall_ghost_nodes( Q, node ) {
-                                //Q.setSecondPartitionIndex( node, Q.getNodeLabel(node) );
-                                Q.setNodeLabel( node, Q.getGlobalID(node) );
-                        } endfor                  
-
-                        distributed_quality_metrics new_qm;
-                        //config_orig.stop_factor = 5000; //TODO: try different parameter combinations
-                        //TODO: experiment with setting the forceNewVcycle to true
-                        vcycle( communicator, config_orig, Q, new_qm, PEtree, max_coarsest_size, false );
-
-                        qm.set_initial_numNodes( new_qm.get_initial_numNodes() );
-                        qm.set_initial_numEdges( new_qm.get_initial_numEdges() );
-                        const EdgeWeight new_edge_cut = new_qm.edge_cut( Q, communicator );
-
-#ifndef NOOUTPUT
-                        if( rank == ROOT ) {
-                                std::cout << "log>" << "=====================================" << std::endl;
-                                std::cout << "log>" << "old edge cut " << prev_edge_cut << " new " <<  new_edge_cut << std::endl;
-                                std::cout << "log>" << "\t==\t==\t==\t==\t==\t==" << std::endl;
-                        }
-#endif
-                        
-                        if( prev_edge_cut<new_edge_cut ){
-                                #ifndef NOOUTPUT
-                                if( rank == ROOT ) std::cout << "log>" << "old cut is lower, will re-apply it to graph" << std::endl;
-                                #endif
-                                //re-apply old partition
-                                forall_local_nodes( Q, i){
-                                        Q.setNodeLabel( i, prev_partition[i] );
-                                }endfor
-                        }
                 }else{
                         //perform initial partition as normal
                         qm.set_initial_numNodes( Q.number_of_global_nodes() );
@@ -394,6 +354,66 @@ void distributed_partitioner::vcycle(
 }
 
 
+void distributed_partitioner::further_coarsen( 
+    MPI_Comm communicator,
+    PEID rank,
+    PPartitionConfig config,
+    parallel_graph_access & Q,
+    distributed_quality_metrics & qm,
+    const processor_tree & PEtree ) {
+
+        const NodeID num_local_nodes = Q.number_of_local_nodes();
+        const NodeID num_ghost_nodes = Q.number_of_ghost_nodes();
+        std::vector<PartitionID> prev_partition( num_local_nodes );
+        std::vector<PartitionID> prev_partition_ghost( num_ghost_nodes );
+        //most likely, in NOT the first round, the second cut (from the previous cycle) is lower
+        const EdgeWeight prev_edge_cut = std::min( qm.edge_cut(Q, communicator), qm.edge_cut_second(Q, communicator) );
+
+        //store previous partition
+        forall_local_nodes( Q, i ){
+                prev_partition[i] = Q.getNodeLabel(i);
+                //Q.setSecondPartitionIndex( i, Q.getNodeLabel(i) ); //TODO: is this needed?
+                Q.setNodeLabel( i, Q.getGlobalID(i) ); //TODO: is this needed? check how it behaves without this line
+        }endfor
+        forall_ghost_nodes( Q, node ) {
+                //Q.setSecondPartitionIndex( node, Q.getNodeLabel(node) );
+                Q.setNodeLabel( node, Q.getGlobalID(node) );
+        } endfor                  
+
+        distributed_quality_metrics new_qm;
+        //config.stop_factor = 5000; //TODO: try different parameter combinations
+        config.label_iterations_coarsening = 10;
+        //config.coarsening_factor = 4;
+        //TODO: experiment with setting the forceNewVcycle to true
+        //since last parameter is false, the previous is not used
+if( rank == ROOT ) std::cout<< __LINE__ << ", inside further_coarsen()" << std::endl;
+        vcycle( communicator, config, Q, new_qm, PEtree, 1, false );
+
+        qm.set_initial_numNodes( new_qm.get_initial_numNodes() );
+        qm.set_initial_numEdges( new_qm.get_initial_numEdges() );
+        const EdgeWeight new_edge_cut = new_qm.edge_cut( Q, communicator );
+
+#ifndef NOOUTPUT
+        if( rank == ROOT ) {
+                std::cout << "log>" << "=====================================" << std::endl;
+                std::cout << "log>" << "old edge cut " << prev_edge_cut << " new " <<  new_edge_cut << std::endl;
+                std::cout << "log>" << "\t==\t==\t==\t==\t==\t==" << std::endl;
+        }
+#endif
+        
+        if( prev_edge_cut<new_edge_cut ){
+                #ifndef NOOUTPUT
+                if( rank == ROOT ) std::cout << "log>" << "old cut is lower, will re-apply it to graph" << std::endl;
+                #endif
+                //re-apply old partition
+                forall_local_nodes( Q, i){
+                        Q.setNodeLabel( i, prev_partition[i] );
+                }endfor
+                forall_ghost_nodes( Q, node ){
+                        Q.setNodeLabel( node, prev_partition_ghost[node] );
+                }endfor
+        }
+}
 
 
 void distributed_partitioner::check_labels( MPI_Comm communicator, PPartitionConfig & config, parallel_graph_access & G) {
