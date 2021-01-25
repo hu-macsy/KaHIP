@@ -29,6 +29,8 @@
 #include "timer.h"
 #include "tools/distributed_quality_metrics.h"
 
+#include "system_info.h"
+
 
 int main(int argn, char **argv) {
 
@@ -50,6 +52,12 @@ int main(int argn, char **argv) {
         MPI_Comm communicator = MPI_COMM_WORLD; 
         MPI_Comm_rank( communicator, &rank);
         MPI_Comm_size( communicator, &size);
+
+
+[[maybe_unused]] double myMem;
+if( rank == ROOT ) std::cout<< __LINE__ << ", before reading graph, starting mem usage" << std::endl;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
+
 
         timer t;
         MPI_Barrier(MPI_COMM_WORLD);
@@ -84,9 +92,12 @@ int main(int argn, char **argv) {
                 parallel_graph_access G(communicator);
                 parallel_graph_io::readGraphWeighted(partition_config, G, graph_filename, rank, size, communicator);
                 //parallel_graph_io::readGraphWeightedFlexible(G, graph_filename, rank, size, communicator);
-                if( rank == ROOT ) std::cout <<  "took " <<  t.elapsed()  << std::endl;
-                if( rank == ROOT ) std::cout <<  "n:" <<  G.number_of_global_nodes() << " m: " <<  G.number_of_global_edges()  << std::endl;
-
+                if( rank == ROOT ){
+                        std::cout <<  "took " <<  t.elapsed()  << std::endl;
+                        std::cout <<  "n: " <<  G.number_of_global_nodes() << " m: " <<  G.number_of_global_edges()  << std::endl;
+                }
+if( rank == ROOT ) std::cout<< __LINE__ << ", read graph " << std::endl;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
                 //
                 // mapping activity : read processor tree if given 
                 //
@@ -136,7 +147,8 @@ int main(int argn, char **argv) {
                 distributed_partitioner::generate_random_choices( partition_config );
 
                 //G.printMemoryUsage(std::cout);
-
+if( rank == ROOT ) std::cout<< __LINE__ << ", allocated data structs" << std::endl;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
                 //compute some stats
                 EdgeWeight interPEedges = 0;
                 EdgeWeight localEdges = 0;
@@ -161,8 +173,8 @@ int main(int argn, char **argv) {
                 MPI_Allreduce(&localWeight, &globalWeight, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, communicator);
 
                 if( rank == ROOT ) {
-                        std::cout <<  "log> ghost edges " <<  globalInterEdges/(double)G.number_of_global_edges() << std::endl;
-                        std::cout <<  "log> local edges " <<  globalIntraEdges/(double)G.number_of_global_edges() << std::endl;
+                        std::cout <<  "log> ghost edges/m " <<  globalInterEdges/(double)G.number_of_global_edges() << std::endl;
+                        std::cout <<  "log> local edges/m " <<  globalIntraEdges/(double)G.number_of_global_edges() << std::endl;
                 }
 
                 t.restart();
@@ -198,6 +210,9 @@ int main(int argn, char **argv) {
 
                 MPI_Barrier(communicator);
                 double running_time = t.elapsed();
+
+if( rank == ROOT ) std::cout<< __LINE__ << ", finished partitioning " << std::endl;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
 
                 //qm.evaluateMapping(G, PEtree, communicator);
 

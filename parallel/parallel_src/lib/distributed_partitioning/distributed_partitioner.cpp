@@ -212,10 +212,25 @@ void distributed_partitioner::vcycle(
         }
 
 #ifndef NOOUTPUT
+
+{
+NodeID global_ghost_nodes = 0;
+NodeID G_local_ghost_nodes = G.number_of_ghost_nodes();
+NodeID G_local_nodes = G.number_of_local_nodes();
+NodeID G_all_local_data = G_local_nodes+G_local_ghost_nodes;
+NodeID max_ghost_nodes = 0;
+NodeID max_local_nodes = 0;
+NodeID max_all_local_nodes = 0;
+MPI_Reduce(&G_local_ghost_nodes, &global_ghost_nodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, communicator);
+MPI_Reduce(&G_local_ghost_nodes, &max_ghost_nodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, ROOT, communicator);
+MPI_Reduce(&G_local_nodes, &max_local_nodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, ROOT, communicator);
+MPI_Reduce(&G_all_local_data, &max_all_local_nodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, ROOT, communicator);
         if( rank == ROOT ) {
                 std::cout <<  "log>cycle: " << m_cycle << " level: " << m_level << " contraction took " <<  t.elapsed() << std::endl;
-                std::cout <<  "log>cycle: " << m_cycle << " level: " << m_level << " coarse nodes n=" << Q.number_of_global_nodes() << ", coarse edges m=" << Q.number_of_global_edges() << std::endl;
+                std::cout <<  "log>cycle: " << m_cycle << " level: " << m_level << " coarse nodes n=" << Q.number_of_global_nodes() << ", coarse edges m=" << Q.number_of_global_edges() << " ghost nodes n=" << Q.number_of_ghost_nodes()<< std::endl;
+PRINT(std::cout << "global_ghost_nodes "<< global_ghost_nodes << " , max_ghost_nodes " << max_ghost_nodes << ", max_local_nodes " << max_local_nodes << ", max_all_local_nodes "<< max_all_local_nodes << std::endl;)
         }
+}
 #endif
 
         if( !contraction_stop_decision.contraction_stop(config, G, Q)) {

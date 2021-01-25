@@ -186,12 +186,11 @@ void distributed_evolutionary_partitioning::perform_partitioning( MPI_Comm commu
         if( rank == (int)ROOT) {
                 std::cout <<  "log>cur edge cut " <<  edgecut  << std::endl;
                 std::cout <<  "log>cur balance  " <<  balance << std::endl;
-[[maybe_unused]] double myMem;
 std::cout<< __LINE__ << ", exiting distributed_evolutionary_partitioning::perform_partitioning()" << std::endl;
-getFreeRam(MPI_COMM_WORLD, myMem, true);
         }
+[[maybe_unused]] double myMem;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
 #endif
-
 
         delete[] xadj;
         delete[] adjncy;

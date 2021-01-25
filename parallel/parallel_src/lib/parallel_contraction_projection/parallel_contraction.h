@@ -28,10 +28,10 @@ private:
 
         void get_nodes_to_cnodes_ghost_nodes( MPI_Comm communicator, parallel_graph_access & G );   
 
-	void build_quotient_graph_locally( parallel_graph_access & G, 
-                                           NodeID number_of_distinct_labels, 
-					   hashed_graph & hG, 
-					   std::unordered_map< NodeID, NodeWeight > & node_weights);
+        void build_quotient_graph_locally(  parallel_graph_access & G, 
+                                            NodeID number_of_distinct_labels, 
+                                            hashed_graph & hG, 
+                                            std::unordered_map< NodeID, NodeWeight > & node_weights);
 
         void redistribute_hased_graph_and_build_graph_locally( MPI_Comm communicator, hashed_graph &  hG, 
                                                                std::unordered_map< NodeID, NodeWeight > & node_weights,
