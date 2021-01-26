@@ -32,9 +32,6 @@ public:
             return perform_partitioning( MPI_COMM_WORLD, partition_config, G, qm);
         }
         
-        //void perform_recursive_partitioning( PPartitionConfig & config, parallel_graph_access & G);
-        //void perform_recursive_partitioning( MPI_Comm comm, PPartitionConfig & partition_config, parallel_graph_access & G);
-
         void check( MPI_Comm comm, PPartitionConfig & config, parallel_graph_access & G);
         void check_labels( MPI_Comm comm, PPartitionConfig & config, parallel_graph_access & G);
         static void generate_random_choices( PPartitionConfig & config ) ;

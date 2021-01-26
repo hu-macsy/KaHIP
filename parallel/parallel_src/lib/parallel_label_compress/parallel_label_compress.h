@@ -70,7 +70,7 @@ class parallel_label_compress {
 
                         //std::unordered_map<NodeID, NodeWeight> hash_map;
                         hmap_wrapper< T > hash_map(config);
-                        hash_map.init( G.get_max_degree() );
+                        hash_map.init( G.get_local_max_degree() );
 
                         int updateSize = config.update_step_size;
                         double total_ghost_update_time = 0.0;

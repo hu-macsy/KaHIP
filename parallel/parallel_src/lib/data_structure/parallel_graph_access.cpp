@@ -16,7 +16,7 @@ ULONG parallel_graph_access::m_comm_rounds_up = 128;
 parallel_graph_access::parallel_graph_access( MPI_Comm communicator ) : m_num_local_nodes(0), 
                                                  from(0), 
                                                  to(0),
-                                                 m_num_ghost_nodes(0), m_max_node_degree(0), m_bm(NULL) {
+                                                 m_num_ghost_nodes(0), m_local_max_node_degree(0), m_bm(NULL) {
 
 
                 m_communicator = communicator;
@@ -40,7 +40,7 @@ parallel_graph_access& parallel_graph_access::operator=( parallel_graph_access& 
         set_range( G.get_from_range(), G.get_to_range() );
         set_range_array( G.get_range_array() ); 
         m_num_ghost_nodes = G.number_of_ghost_nodes();
-        m_max_node_degree = G.get_max_degree();
+        m_local_max_node_degree = G.get_local_max_degree();
         //m_bm = 
         m_communicator = G.getCommunicator();
         MPI_Comm_rank( m_communicator, &rank);

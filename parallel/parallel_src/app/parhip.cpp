@@ -98,6 +98,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 }
 if( rank == ROOT ) std::cout<< __LINE__ << ", read graph " << std::endl;
 getFreeRam(MPI_COMM_WORLD, myMem, true);
+G.remove_high_degree_nodes();
                 //
                 // mapping activity : read processor tree if given 
                 //

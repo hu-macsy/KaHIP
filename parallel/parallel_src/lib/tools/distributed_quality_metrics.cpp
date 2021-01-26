@@ -344,13 +344,11 @@ EdgeWeight distributed_quality_metrics::comm_bnd( PPartitionConfig & config, par
         MPI_Allreduce(&num_inner_nodes[0], &global_num_inner_nodes[0], config.k, MPI_UNSIGNED_LONG_LONG, MPI_SUM, communicator);
         MPI_Allreduce(&num_bnd_nodes[0], &global_num_bnd_nodes[0], config.k, MPI_UNSIGNED_LONG_LONG, MPI_SUM, communicator);
 
-        
         EdgeWeight total_bnd_nodes = std::accumulate( global_num_bnd_nodes.begin(), global_num_bnd_nodes.end(), 0);
-        EdgeWeight total_inner_nodes = std::accumulate( global_num_inner_nodes.begin(), global_num_inner_nodes.end(), 0);
-        
+        [[maybe_unused]] EdgeWeight total_inner_nodes = std::accumulate( global_num_inner_nodes.begin(), global_num_inner_nodes.end(), 0);
         EdgeWeight max_bnd_nodes = *std::max_element( global_num_bnd_nodes.begin(), global_num_bnd_nodes.end() );
         
-        EdgeWeight total_nodes = total_bnd_nodes + total_inner_nodes;
+        //EdgeWeight total_nodes = total_bnd_nodes + total_inner_nodes;
         //TODO assertion to check if total sum of nodes is correct
                 
         if( rank == ROOT ) {

@@ -190,7 +190,7 @@ public:
         parallel_graph_access( ) : m_num_local_nodes(0), 
                                      from(0), 
                                      to(0),
-                                     m_num_ghost_nodes(0), m_max_node_degree(0), m_bm(NULL)  { 
+                                     m_num_ghost_nodes(0), m_local_max_node_degree(0), m_bm(NULL)  { 
                                              m_communicator = MPI_COMM_WORLD;
                                              MPI_Comm_rank( m_communicator, &rank);
                                              MPI_Comm_size( m_communicator, &size);
@@ -229,7 +229,7 @@ public:
                 m_nodes[node].firstEdge = e;
                 m_divisor = ceil(global_n / (double)size);
                 // every PE has to make same amount communication iterations 
-                // we use ceil an check afterwards wether everyone has done the right 
+                // we use ceil an check afterwards weather everyone has done the right 
                 // amount of communication rounds 
                 if( update_comm_rounds ) {
                         m_comm_rounds = std::max(m_comm_rounds, 8ULL);
@@ -278,7 +278,7 @@ public:
         };
 
         NodeID new_node() {
-		m_cur_degree = 0;
+                m_cur_degree = 0;
                 ASSERT_TRUE(m_building_graph);
                 return node++;
         };
@@ -314,7 +314,7 @@ public:
                                 dummy_data.weight            = 1;
                                 m_nodes_data.push_back(dummy_data);
 
-                                // add addtional data
+                                // add additional data
                                 AdditionalNonLocalNodeData add_data;
                                 //has to be changed once we implement better load balancing 
                                 //add_data.peID     = target / m_divisor; 
@@ -341,8 +341,8 @@ public:
                 m_last_source = source;
                 m_cur_degree++;
 
-                if( m_cur_degree > m_max_node_degree ) {
-                        m_max_node_degree = m_cur_degree;
+                if( m_cur_degree > m_local_max_node_degree ) {
+                        m_local_max_node_degree = m_cur_degree;
                 }
                 return e_bar;
         };
@@ -363,11 +363,20 @@ public:
                 m_gnc->init();
         };
 
-        NodeID get_max_degree() {
-                return m_max_node_degree;
-        }  
+        NodeID get_local_max_degree() {
+                return m_local_max_node_degree;
+        }
+        //TODO: communicator not really needed, just to indicate that this operation requires global communication. remove?
+        NodeID get_global_max_degree( MPI_Comm communicator ) {
+                assert( !m_building_graph );
+                const NodeID local_max_degree = get_local_max_degree();
+                NodeID global_max_degree = 7;
+                MPI_Allreduce( &local_max_degree, &global_max_degree, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, communicator);
+                return global_max_degree;
+        }
+
         /* ============================================================= */
-        /* methods handeling balance */
+        /* methods handling balance */
         /* ============================================================= */
         void init_balance_management( PPartitionConfig & config );
         void update_block_weights();
@@ -438,7 +447,7 @@ public:
         NodeID getEdgeTarget(EdgeID e);
 
         //methods for non-local / ghost nodes only
-        //these methods are usally called to communicate data
+        //these methods are usually called to communicate data
         PEID getTargetPE(NodeID node);
 
         //input is a global id 
@@ -503,6 +512,26 @@ public:
 
         void reinit();
 
+        void remove_high_degree_nodes(){ // MPI_Comm comm, PPartitionConfig & partition_config ){
+            const NodeID num_local_nodes = number_of_global_nodes();
+            const NodeID num_local_edges = number_of_global_edges();
+            const double avg_degree =  num_local_edges/num_local_nodes;
+            const double allowed_degree = avg_degree*1.5;   //try 1.5
+const NodeID glob_mD = get_global_max_degree(m_communicator);
+int affected_nodes = 0;
+            forall_local_nodes((*this), node) {
+                const double node_degree = getNodeDegree(node);
+                //if this node has a higher degree than we allow
+                if (node_degree>allowed_degree){
+                    forall_out_edges((*this), e, node) {
+                        setEdgeWeight(e, 0.0); //neutralize this edge
+                    }endfor
+affected_nodes++;
+                } 
+            }endfor
+std::cout<< rank << ": affected_nodes " << affected_nodes << " \t=\t=\t=\t=\t=\t=\t allowed_degree "<< allowed_degree << " global_max_deg " << glob_mD << std::endl;
+        }
+
         /* ============================================================= */
         /* parallel graph data structure  */
         /* ============================================================= */
@@ -547,7 +576,7 @@ private:
         static ULONG m_comm_rounds; // global number of edges
         static ULONG m_comm_rounds_up; // global number of edges
 
-        NodeID m_max_node_degree;
+        NodeID m_local_max_node_degree;
         NodeID m_cur_degree;
 
         PEID size;
