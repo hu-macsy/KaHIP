@@ -364,6 +364,188 @@ public:
 	NodeID get_max_degree() {
 		return m_max_node_degree;
 	}
+
+
+
+
+		// I need to save the edge lists.
+  // nodelist should have local nodes
+	  // node list should have unique entries TBC
+	  // check also if nodelist is empty  
+        static int remove_edges_from_nodelist(parallel_graph_access & inG, parallel_graph_access & outG, std::vector< NodeID > & node_list, MPI_Comm communicator) {
+
+	  int rank, comm_size;
+  	  MPI_Comm_rank( communicator, &rank);
+	  MPI_Comm_size( communicator, &comm_size);
+	  NodeID global_nnodes = inG.number_of_global_nodes();
+	  // unused
+	  // NodeID global_nedges = inG.number_of_global_edges();
+	  NodeID local_nnodes = inG.number_of_local_nodes();
+          // unused
+	  // NodeID local_nedges = inG.number_of_local_edges();
+	  // unused
+	  //NodeID out_nedges = local_nedges;
+
+	 
+	  std::vector<bool> is_high_degree_node(local_nnodes, false);
+	  for(auto& u : node_list)
+	    is_high_degree_node[u] = true;
+	  
+	  /*   */ 
+	  NodeID n = global_nnodes;
+	  ULONG from  = rank     * ceil(n / (double)comm_size);
+	  ULONG to    = (rank+1) * ceil(n / (double)comm_size) - 1;
+	  to = std::min<unsigned long>(to, n-1);
+	  ULONG local_no_nodes = 0;
+	  if (from <= to)
+	    local_no_nodes = to - from + 1;
+	  /*  */
+	  /* local_no_nodes = local_nnodes; */
+	  
+	  // for(auto& u : node_list)
+	  //   out_nedges -= (inG.getNodeDegree(u)-1);
+	  // // keeping one edge per star node. Beware of star--star connection
+	  
+
+	  std::vector< std::vector< NodeID > > local_edge_lists;
+	  local_edge_lists.resize(local_no_nodes);
+	  std::vector< std::vector< NodeID > > local_edge_weights;
+	  local_edge_weights.resize(local_no_nodes);
+        
+	  EdgeID edge_counter = 0;
+	  
+	  forall_local_nodes(inG,u) {
+	    if (is_high_degree_node[u] == true) {
+	      forall_out_edges(inG, e, u) {
+		NodeID v = inG.getEdgeTarget(e);
+		if (is_high_degree_node[v] == true)
+		  continue;
+		else {
+		  EdgeWeight weight = inG.getEdgeWeight(e);
+		  local_edge_lists[u].push_back(v);
+		  local_edge_weights[u].push_back(weight);
+		  edge_counter++;
+		  break;
+		}
+	      } endfor
+	    }
+	    else {
+	      //PartitionID uBlock = inG.getNodeLabel(u);
+	      forall_out_edges(inG, e, u) {
+		NodeID v = inG.getEdgeTarget(e);
+		EdgeWeight weight = inG.getEdgeWeight(e);
+		local_edge_lists[u].push_back(v);
+		local_edge_weights[u].push_back(weight);
+		edge_counter++;
+	      } endfor
+		  }
+	  } endfor
+
+	 // Do I need globaledgeWeights ?
+
+	int t_edge_count = 0;
+	MPI_Allreduce(&edge_counter, &t_edge_count, 1, MPI_INT, MPI_SUM, communicator);
+	// TODO: do I need the barrier here? Prop not because of Allreduce
+	MPI_Barrier(communicator);
+	//cg.set_number_of_global_edges(t_edge_count);     
+	  
+	 outG.start_construction((NodeID) local_no_nodes, edge_counter*2,(NodeID) global_nnodes, t_edge_count);
+	 outG.set_range(from, to);
+  
+	  std::vector< NodeID > vertex_dist( comm_size+1, 0 );
+	  for( PEID peID = 0; peID <= comm_size; peID++) {
+	    vertex_dist[peID] = peID * ceil(n / (double)comm_size); // from positions
+	    //std::cout <<  " R " << rank << " comm vertex_dist[" << peID << "] = " << vertex_dist[peID] << std::endl;
+	  }
+	  outG.set_range_array(vertex_dist);
+	  
+
+	  for(auto u : node_list)
+	    std::cout <<  " star node " << u << " local_edge_lists.size() = " << local_edge_lists[u].size() << std::endl;
+	  
+	  
+    
+	  for (NodeID i = 0; i < local_no_nodes; ++i) {
+	    NodeID node = outG.new_node();
+	    outG.setNodeWeight(node, 1);
+	    outG.setNodeLabel(node, from+node);
+	    outG.setSecondPartitionIndex(node, 0);
+	    for( ULONG j = 0; j < local_edge_lists[i].size(); j++) {
+	      NodeID target = local_edge_lists[i][j];
+	      EdgeID e = outG.new_edge(node, target);
+	      //std::cout << " R: " << rank << " [" << node <<  ", " << target << "]: "
+	      //	  << std::endl; 
+	      EdgeWeight weight = local_edge_weights[i][j];
+	      outG.setEdgeWeight(e, weight);
+                }
+	    
+	  }
+
+	  outG.finish_construction(); 
+	  MPI_Barrier(communicator);
+
+	  return 0; 
+	}
+  
+
+// template <typename T>
+// void erase(node u, index idx, std::vector<std::vector<T>> &vec) {
+//     vec[u][idx] = vec[u].back();
+//     vec[u].pop_back();
+// }
+
+//   /* remove all edges of the node minus the first one */
+//   void remove_edges_of_node(NodeID u) {
+//     assert(u < z);
+//     assert(exists[u]);
+//     assert(v < z);
+//     assert(exists[v]);
+
+//     index vi = indexInOutEdgeArray(u, v);
+//     index ui = indexInInEdgeArray(v, u);
+
+//     if (vi == none) {
+//         std::stringstream strm;
+//         strm << "edge (" << u << "," << v << ") does not exist";
+//         throw std::runtime_error(strm.str());
+//     }
+
+//     const auto isLoop = (u == v);
+//     m--; // decrease number of edges
+//     if (isLoop)
+//         storedNumberOfSelfLoops--;
+
+//     erase<node>(u, vi, outEdges);
+//     if (weighted) {
+//         erase<edgeweight>(u, vi, outEdgeWeights);
+//     }
+//     if (edgesIndexed) {
+//         erase<edgeid>(u, vi, outEdgeIds);
+//     }
+
+//     if (directed) {
+//         assert(ui != none);
+
+//         erase<node>(v, ui, inEdges);
+//         if (weighted) {
+//             erase<edgeweight>(v, ui, inEdgeWeights);
+//         }
+//         if (edgesIndexed) {
+//             erase<edgeid>(v, ui, inEdgeIds);
+//         }
+//     } else if (!isLoop) {
+//         // undirected, not self-loop
+//         erase<node>(v, ui, outEdges);
+//         if (weighted) {
+//             erase<edgeweight>(v, ui, outEdgeWeights);
+//         }
+//         if (edgesIndexed) {
+//             erase<edgeid>(v, ui, outEdgeIds);
+//         }
+//     }
+// }
+
+  
         /* ============================================================= */
         /* methods handeling balance */
         /* ============================================================= */

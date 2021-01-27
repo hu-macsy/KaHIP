@@ -98,6 +98,57 @@ int main(int argn, char **argv) {
                         }
                 }
 
+		// currently high_degree_nodes are ''locally high_degree_nodes''
+		// high_degree_nodes are not necessarily equally distributed across PEs
+		std::vector<NodeID> node_list;
+		int c = 0;
+		NodeID local_node_bound = (NodeID) (G.number_of_global_nodes()*0.1)/size;
+		NodeID degree_bound = (NodeID) (G.get_max_degree()*0.9);
+		forall_local_nodes(G,n) {
+		  if (c > local_node_bound) break;
+		  if (G.getNodeDegree(n) > degree_bound) {
+		    node_list.push_back(n);
+		    std::cout <<  " PE " << rank << " pushing star node " << n << " of degree = " <<
+		      G.getNodeDegree(n)  << std::endl;
+		    c++;
+		  }
+		  
+		} endfor
+
+	        node_list.resize(c);    
+		std::cout << " local_node_bound  = " << local_node_bound
+			  << " max_degree  = "  << G.get_max_degree()
+			  << " degree_bound  = "  << degree_bound
+			  << " c = " << c << std::endl;
+		
+		std::cout <<  " PE " << rank << " nodelist (" << node_list.size() << ") =  [ "  << std::endl;
+		for(auto u : node_list)
+		  std::cout << u << " , degree = " << G.getNodeDegree(u) << std::endl;
+		std::cout <<  " ] "  << std::endl;
+		
+		std::cout << " G.global graph nodes " << G.number_of_global_nodes()
+			  << " G.global graph edges " << G.number_of_global_edges()
+			  << " G.local graph nodes " << G.number_of_local_nodes()
+			  << " G.local graph edges " << G.number_of_local_edges()
+			  << std::endl;
+
+
+		parallel_graph_access reduced_G(communicator);
+		parallel_graph_access::remove_edges_from_nodelist(G, reduced_G, node_list, communicator);
+
+
+		std::cout << " reduced_G.global graph nodes " << reduced_G.number_of_global_nodes()
+			  << " reduced_G.global graph edges " << reduced_G.number_of_global_edges()
+			  << " reduced_G.local graph nodes " << reduced_G.number_of_local_nodes()
+			  << " reduced_G.local graph edges " << reduced_G.number_of_local_edges()
+			  << std::endl;
+		  
+		std::cout <<  " PE " << rank << " nodelist (" << node_list.size() << ") =  [ "  << std::endl;
+		for(auto u : node_list)
+		  std::cout << u << " , degree = " << reduced_G.getNodeDegree(u) << std::endl;
+		std::cout <<  " ] "  << std::endl;
+		
+
                 if( partition_config.refinement_focus ){
                         //in this version, the coarsening factor depends on the input size. As cluster_coarsening_factor sets a limit to the size
                         //of the clusters when coarsening, it should be more than 2, thus, coarsening_factor should be greater than 2
@@ -200,7 +251,7 @@ int main(int argn, char **argv) {
                 MPI_Barrier(communicator);
                 double running_time = t.elapsed();
 
-                //qm.evaluateMapping(G, PEtree, communicator);
+                qm.evaluateMapping(G, PEtree, communicator);
 
                 EdgeWeight edge_cut = qm.edge_cut( G, communicator );
                 EdgeWeight qap = 0;
