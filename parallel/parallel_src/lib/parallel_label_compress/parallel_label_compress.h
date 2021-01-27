@@ -111,6 +111,7 @@ class parallel_label_compress {
 
                                         if( G.getNodeDegree(node) == 0) {
                                                 // find a block to assign it to
+					
                                                 if(config.vcycle) {
                                                         NodeWeight prev_block_size = G.getBlockSize( G.getNodeLabel( prev_node ) );
                                                         bool same_block = G.getSecondPartitionIndex(prev_node)==G.getSecondPartitionIndex(node);
@@ -147,7 +148,7 @@ class parallel_label_compress {
                                         if( numSeenNodes%updateSize==0 ){
                                                 num_update_calls++;
                                                 std::chrono::time_point<std::chrono::steady_clock> startTime =  std::chrono::steady_clock::now();
-                                                G.update_ghost_node_data();
+						G.update_ghost_node_data();
                                                 std::chrono::duration<double> endTime = std::chrono::steady_clock::now() - startTime;
                                                 total_ghost_update_time += endTime.count();
                                         }
@@ -155,9 +156,9 @@ class parallel_label_compress {
                                         hash_map.clear();
 
                                 } endfor //for G nodes
-                                //std::cout << "in iteration round " << i << ", we moved " << numChanges << " vertices" <<std::endl;
+                                std::cout << "in iteration round " << i << ", we moved " << numChanges << " vertices" <<std::endl;
                                 G.update_ghost_node_data_finish(); 
-                                //std::cout << "updated ghost nodes" << std::endl;
+                                std::cout << "updated ghost nodes" << std::endl;
 
                                 [[maybe_unused]] double myMem;
                                 getFreeRam(MPI_COMM_WORLD, myMem, true);

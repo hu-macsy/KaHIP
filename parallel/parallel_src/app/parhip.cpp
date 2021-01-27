@@ -81,12 +81,15 @@ int main(int argn, char **argv) {
 
                 srand(partition_config.seed);
 
-                parallel_graph_access G(communicator);
-                parallel_graph_io::readGraphWeighted(partition_config, G, graph_filename, rank, size, communicator);
+                parallel_graph_access in_G(communicator);
+                parallel_graph_io::readGraphWeighted(partition_config, in_G, graph_filename, rank, size, communicator);
                 //parallel_graph_io::readGraphWeightedFlexible(G, graph_filename, rank, size, communicator);
                 if( rank == ROOT ) std::cout <<  "took " <<  t.elapsed()  << std::endl;
-                if( rank == ROOT ) std::cout <<  "n:" <<  G.number_of_global_nodes() << " m: " <<  G.number_of_global_edges()  << std::endl;
+                if( rank == ROOT ) std::cout <<  "n:" <<  in_G.number_of_global_nodes() << " m: " <<  in_G.number_of_global_edges()  << std::endl;
 
+
+
+		
                 //
                 // mapping activity : read processor tree if given 
                 //
@@ -98,55 +101,31 @@ int main(int argn, char **argv) {
                         }
                 }
 
-		// currently high_degree_nodes are ''locally high_degree_nodes''
-		// high_degree_nodes are not necessarily equally distributed across PEs
-		std::vector<NodeID> node_list;
-		int c = 0;
-		NodeID local_node_bound = (NodeID) (G.number_of_global_nodes()*0.1)/size;
-		NodeID degree_bound = (NodeID) (G.get_max_degree()*0.9);
-		forall_local_nodes(G,n) {
-		  if (c > local_node_bound) break;
-		  if (G.getNodeDegree(n) > degree_bound) {
-		    node_list.push_back(n);
-		    std::cout <<  " PE " << rank << " pushing star node " << n << " of degree = " <<
-		      G.getNodeDegree(n)  << std::endl;
-		    c++;
-		  }
-		  
-		} endfor
 
-	        node_list.resize(c);    
-		std::cout << " local_node_bound  = " << local_node_bound
-			  << " max_degree  = "  << G.get_max_degree()
-			  << " degree_bound  = "  << degree_bound
-			  << " c = " << c << std::endl;
+		// std::vector<NodeID> node_list;
+		// int c = 0;
+		// NodeID local_node_bound = (NodeID) (in_G.number_of_global_nodes()*0.1)/size;
+		// NodeID degree_bound = (NodeID) (in_G.get_max_degree()*0.9);
+		// forall_local_nodes(in_G,n) {
+		// 	if (c > local_node_bound) break;
+		// 	if (in_G.getNodeDegree(n) > degree_bound) {
+		// 		node_list.push_back(n);
+		// 		c++;
+		// 	}		  
+		// } endfor
+	        // node_list.resize(c);
+		// std::cout << " local_node_bound  = " << local_node_bound
+		// 	  << " max_degree  = "  << in_G.get_max_degree()
+		// 	  << " degree_bound  = "  << degree_bound
+		// 	  << " c = " << c << std::endl;
 		
-		std::cout <<  " PE " << rank << " nodelist (" << node_list.size() << ") =  [ "  << std::endl;
-		for(auto u : node_list)
-		  std::cout << u << " , degree = " << G.getNodeDegree(u) << std::endl;
-		std::cout <<  " ] "  << std::endl;
 		
-		std::cout << " G.global graph nodes " << G.number_of_global_nodes()
-			  << " G.global graph edges " << G.number_of_global_edges()
-			  << " G.local graph nodes " << G.number_of_local_nodes()
-			  << " G.local graph edges " << G.number_of_local_edges()
-			  << std::endl;
+		
 
 
-		parallel_graph_access reduced_G(communicator);
-		parallel_graph_access::remove_edges_from_nodelist(G, reduced_G, node_list, communicator);
-
-
-		std::cout << " reduced_G.global graph nodes " << reduced_G.number_of_global_nodes()
-			  << " reduced_G.global graph edges " << reduced_G.number_of_global_edges()
-			  << " reduced_G.local graph nodes " << reduced_G.number_of_local_nodes()
-			  << " reduced_G.local graph edges " << reduced_G.number_of_local_edges()
-			  << std::endl;
-		  
-		std::cout <<  " PE " << rank << " nodelist (" << node_list.size() << ") =  [ "  << std::endl;
-		for(auto u : node_list)
-		  std::cout << u << " , degree = " << reduced_G.getNodeDegree(u) << std::endl;
-		std::cout <<  " ] "  << std::endl;
+		parallel_graph_access G(communicator);
+	        parallel_graph_access::copy_graph(in_G, G, communicator);
+		//parallel_graph_access::remove_edges_from_nodelist(in_G, G, node_list, communicator);
 		
 
                 if( partition_config.refinement_focus ){
