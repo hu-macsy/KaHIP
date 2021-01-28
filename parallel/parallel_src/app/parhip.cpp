@@ -29,6 +29,8 @@
 #include "timer.h"
 #include "tools/distributed_quality_metrics.h"
 
+#include "parallel_label_compress/parallel_label_compress.h"
+
 #include "system_info.h"
 
 
@@ -118,35 +120,35 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 
 		/******************* ignore *************************/
-		std::vector<NodeID> global_nodes;
-		//  NodeID degree_bound = (NodeID) (local_max_degree*0.9);
-		//  global_nodes.push_back(3);
-		//  global_nodes.push_back(8);
-		//  global_nodes.push_back(6);
-		//  if (rank == ROOT) {
-		// 	 std::cout  <<" [";
-		// 	 for (auto i = global_nodes.begin(); i != global_nodes.end(); ++i)
-		// 		 std::cout << *i << ' ';
-		// 	 std::cout  <<" ]"<< std::endl;
-		//  }
+		// std::vector<NodeID> global_nodes;
+		// //  NodeID degree_bound = (NodeID) (local_max_degree*0.9);
+		// //  global_nodes.push_back(3);
+		// //  global_nodes.push_back(8);
+		// //  global_nodes.push_back(6);
+		// //  if (rank == ROOT) {
+		// // 	 std::cout  <<" [";
+		// // 	 for (auto i = global_nodes.begin(); i != global_nodes.end(); ++i)
+		// // 		 std::cout << *i << ' ';
+		// // 	 std::cout  <<" ]"<< std::endl;
+		// //  }
 
-		std::vector<std::vector<NodeID>> edges;
-	        std::vector<NodeID> local_nodes;
+		// std::vector<std::vector<NodeID>> edges;
+	        // std::vector<NodeID> local_nodes;
 
-		in_G.get_localID_high_degree_nodes(global_nodes,local_nodes);
-		in_G.get_edges_high_degree_nodes(local_nodes, edges);
+		// in_G.get_localID_high_degree_nodes(global_nodes,local_nodes);
+		// in_G.get_edges_high_degree_nodes(local_nodes, edges);
 		
-		std::cout << " Rank  = " << rank
-			  << " local nodes [ "  << std::endl;
-		for (auto i = local_nodes.begin(); i != local_nodes.end(); ++i)
-			std::cout << *i << ' ';
-		std::cout  <<" ]"<< std::endl;
-		std::cout << " edges [ "  << std::endl;
-		for ( const std::vector<NodeID> &v : edges )
-			{
-				for ( int x : v ) std::cout << x << ' ';
-				std::cout << std::endl;
-			}
+		// std::cout << " Rank  = " << rank
+		// 	  << " local nodes [ "  << std::endl;
+		// for (auto i = local_nodes.begin(); i != local_nodes.end(); ++i)
+		// 	std::cout << *i << ' ';
+		// std::cout  <<" ]"<< std::endl;
+		// std::cout << " edges [ "  << std::endl;
+		// for ( const std::vector<NodeID> &v : edges )
+		// 	{
+		// 		for ( int x : v ) std::cout << x << ' ';
+		// 		std::cout << std::endl;
+		// 	}
 		/******************* ignore *************************/
 
 
@@ -265,11 +267,19 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
  
                 // Important: we do not add edges to the graph (anyway m_building_graph must be true to add_edge())
 		// We simple copy the calculated partition to the original graph and continue with that.
-
+                // ADDING PARTITION TO THE ORIGINAL GRAPH
                 forall_local_nodes(G, node) {
 			ULONG block = G.getNodeLabel(node);
 			in_G.setNodeLabel(node, block);
 		} endfor
+
+		// PERFORM ADDITIONAL REF ROUND
+		// TODO:  SET THE PARTITION_CONFIG AS IT SHOULD BE!
+		// parallel_label_compress< std::vector< NodeWeight> > plc_refinement;
+                // plc_refinement.perform_parallel_label_compression( partition_config, in_G, true, false, PEtree);
+
+
+
 			  
 
                 //qm.evaluateMapping(G, PEtree, communicator);
