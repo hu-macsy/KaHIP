@@ -63,6 +63,10 @@ int parallel_graph_io::readGraphWeightedFlexible(parallel_graph_access & G,
                                                  PEID peID, PEID comm_size, MPI_Comm communicator) {
         std::string line;
 
+
+	 int rank;
+         MPI_Comm_rank( communicator, &rank);
+	
         // open file for reading
         std::ifstream in(filename.c_str());
         if (!in) {
@@ -147,12 +151,14 @@ int parallel_graph_io::readGraphWeightedFlexible(parallel_graph_access & G,
         MPI_Barrier(communicator);
 
 	
+
 	// for (int i = 0; i < local_edge_lists.size(); i++) {
-	//   std::cout << "R:" << rank << " node: " << i << " ";
+	//   std::cout << "in R:" << rank << " node-local-edge-list: " << i << " ";
 	//   for (int j = 0; j < local_edge_lists[i].size(); j++)
-	//     std::cout <<  local_edge_lists[i][j] -1 << "  ";
+	//     std::cout <<  local_edge_lists[i][j]-1 << "  ";
 	//   std::cout << std::endl;
 	// }
+
 	
         G.start_construction(local_no_nodes, 2*edge_counter, nmbNodes, 2*nmbEdges);
         G.set_range(from, to);
@@ -172,8 +178,6 @@ int parallel_graph_io::readGraphWeightedFlexible(parallel_graph_access & G,
                 for( ULONG j = 0; j < local_edge_lists[i].size(); j++) {
                         NodeID target = local_edge_lists[i][j]-1; // -1 since there are no nodes with id 0 in the file
                         EdgeID e = G.new_edge(node, target);
-			//std::cout << " R: " << rank << " [" << node <<  ", " << target << "]: "
-			//	  << std::endl; 
                         G.setEdgeWeight(e, 1);
                 }
         }
@@ -181,6 +185,7 @@ int parallel_graph_io::readGraphWeightedFlexible(parallel_graph_access & G,
         G.finish_construction();
         MPI_Barrier(communicator);
 
+	
         return 0;
 }
 

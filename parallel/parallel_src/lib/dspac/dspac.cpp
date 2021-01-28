@@ -26,7 +26,7 @@ void dspac::internal_construct(parallel_graph_access &split_graph) {
     MPI_Comm_rank(m_comm, &rank);
     const NodeID n = m_input_graph.number_of_global_nodes();
 #ifndef NDEBUG
-    const NodeID m = m_input_graph.number_of_global_edges();
+    [[maybe_unused]] const NodeID m = m_input_graph.number_of_global_edges();
 #endif
 
     timer construction_timer;

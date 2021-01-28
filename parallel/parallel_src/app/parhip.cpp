@@ -89,16 +89,16 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
                 srand(partition_config.seed);
 
-                parallel_graph_access G(communicator);
-                parallel_graph_io::readGraphWeighted(partition_config, G, graph_filename, rank, size, communicator);
+                parallel_graph_access in_G(communicator);
+                parallel_graph_io::readGraphWeighted(partition_config, in_G, graph_filename, rank, size, communicator);
                 //parallel_graph_io::readGraphWeightedFlexible(G, graph_filename, rank, size, communicator);
                 if( rank == ROOT ){
                         std::cout <<  "took " <<  t.elapsed()  << std::endl;
-                        std::cout <<  "n: " <<  G.number_of_global_nodes() << " m: " <<  G.number_of_global_edges()  << std::endl;
+                        std::cout <<  "n: " <<  in_G.number_of_global_nodes() << " m: " <<  in_G.number_of_global_edges()  << std::endl;
                 }
 if( rank == ROOT ) std::cout<< __LINE__ << ", read graph " << std::endl;
 getFreeRam(MPI_COMM_WORLD, myMem, true);
-G.remove_high_degree_nodes();
+in_G.remove_high_degree_nodes();
                 //
                 // mapping activity : read processor tree if given 
                 //
@@ -109,6 +109,44 @@ G.remove_high_degree_nodes();
                                 PEtree.print_allPairDistances();
                         }
                 }
+
+	        // NodeID global_max_degree = 0;
+		// NodeID local_max_degree  = in_G.get_max_degree();
+		
+		// MPI_Allreduce(&local_max_degree, &global_max_degree, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, communicator);
+		// std::cout << " R  = " << rank << " local max " << local_max_degree
+		// 	  << " global max " << global_max_degree << std::endl;
+
+
+		
+		// int c = 0;
+		// NodeID local_node_bound = (NodeID) ceil((in_G.number_of_global_nodes()*0.1)/size);
+		// // local node_list for each PE
+		// std::vector<NodeID> node_list;
+		// NodeID degree_bound = (NodeID) (global_max_degree*0.9);
+		// forall_local_nodes(in_G,n) {
+		// 	if (c > local_node_bound) break;
+		// 	if (in_G.getNodeDegree(n) > degree_bound) {
+		// 		node_list.push_back(n);
+		// 		c++;
+		// 	}
+		// } endfor
+		
+		// std::cout << " local_node_bound  = " << local_node_bound
+		// 	  << " max_degree  = "  << in_G.get_max_degree()
+		// 	  << " degree_bound  = "  << degree_bound
+		// 	  << " c = " << c << std::endl;
+
+		// std::vector<std::vector<NodeID>> edge_list; 
+		// in_G.get_removed_edges(node_list,edge_list);			
+		
+
+		parallel_graph_access G(communicator);
+	        parallel_graph_access::copy_graph(in_G, G, communicator);
+		//parallel_graph_access::remove_edges_from_nodelist(in_G, G, node_list, communicator);
+
+
+		
 
                 if( partition_config.refinement_focus ){
                         //in this version, the coarsening factor depends on the input size. As cluster_coarsening_factor sets a limit to the size
