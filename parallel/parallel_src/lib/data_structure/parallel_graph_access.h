@@ -384,7 +384,6 @@ public:
 		if (!node_list.empty()) {
 			edge_list.resize(node_list.size());
 			for (int i = 0; i < node_list.size(); i++) {
-//NodeID node = node_list[i];
 				std::vector<NodeID> l = (*this).get_target_list(node_list[i]);
 				for( int j = 1; j < l.size(); j++) {
 					NodeID target = l[j];
@@ -406,7 +405,7 @@ public:
         // Those nodes keep only one adjacent edge and the rest are removed.
         // add checks if node_lists is empty  
 
-	static int remove_edges_from_nodelist(parallel_graph_access & inG, parallel_graph_access & outG, std::vector< NodeID > & node_list, MPI_Comm communicator) {
+	static int get_reduced_graph(parallel_graph_access & inG, parallel_graph_access & outG, std::vector< NodeID > & node_list, MPI_Comm communicator) {
 		int rank, comm_size;
 		MPI_Comm_rank( communicator, &rank);
 		MPI_Comm_size( communicator, &comm_size);
@@ -465,12 +464,12 @@ public:
 			  
 	 
 	      
-			  // for (int i = 0; i < local_edge_lists.size(); i++) {
-			  //   std::cout << "R:" << rank << " node-local_edge_list: " << i << " ";
-			  //   for (int j = 0; j < local_edge_lists[i].size(); j++)
-			  //     std::cout <<  local_edge_lists[i][j] << "  ";
-			  //   std::cout << std::endl;
-			  // }
+	       for (int i = 0; i < local_edge_lists.size(); i++) {
+		       std::cout << "R:" << rank << " node-local_edge_list: " << i << " ";
+		       for (int j = 0; j < local_edge_lists[i].size(); j++)
+			       std::cout <<  local_edge_lists[i][j] << "  ";
+		       std::cout << std::endl;
+	       }
 
 
 
@@ -512,7 +511,7 @@ public:
 }
   
 
-	static int copy_graph(parallel_graph_access & inG, parallel_graph_access & outG, MPI_Comm communicator) {
+	static int get_graph_copy(parallel_graph_access & inG, parallel_graph_access & outG, MPI_Comm communicator) {
 
 		int rank, comm_size;
 		MPI_Comm_rank( communicator, &rank);
