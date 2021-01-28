@@ -122,7 +122,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		int c = 0;
 		NodeID local_node_bound = (NodeID) ceil((in_G.number_of_global_nodes()*0.1)/size);
 		// local node_list for each PE
-		std::vector<NodeID> node_list;
+//std::vector<NodeID> node_list;
 		//		NodeID degree_bound = (NodeID) (global_max_degree*0.9);
 		// temporarily -- for testing
 		 NodeID degree_bound = (NodeID) (local_max_degree*0.9);
@@ -153,7 +153,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 		parallel_graph_access G(communicator);
 	        //parallel_graph_access::get_graph_copy(in_G, G, communicator);
-                std::vector<NodeID> node_list = in_G.get_high_degree_global_nodes(19);
+                std::vector<NodeID> node_list = in_G.get_high_degree_global_nodes(degree_bound);
                 parallel_graph_access::get_reduced_graph(in_G, G, node_list, communicator);
 		
 		if (rank==ROOT)
