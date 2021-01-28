@@ -201,7 +201,9 @@ public:
 
         parallel_graph_access( MPI_Comm communicator );
 
-        parallel_graph_access& operator=( parallel_graph_access& G );
+        //TODO?: provide copy constructor and assignment operator
+        //parallel_graph_access( parallel_graph_access& other );
+        //parallel_graph_access& operator=( parallel_graph_access& G );
 
         virtual ~parallel_graph_access();
 
@@ -595,6 +597,9 @@ public:
 		return 0; 
 	}
 
+        std::vector<NodeID> get_high_degree_local_nodes(const NodeID minDegree) ;
+
+        std::vector<NodeID> get_high_degree_global_nodes(const NodeID minDegree) ;
   
         /* ============================================================= */
         /* methods handling balance */

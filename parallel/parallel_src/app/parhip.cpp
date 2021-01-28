@@ -94,11 +94,11 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 //parallel_graph_io::readGraphWeightedFlexible(G, graph_filename, rank, size, communicator);
                 if( rank == ROOT ){
                         std::cout <<  "took " <<  t.elapsed()  << std::endl;
-                        std::cout <<  "n: " <<  in_G.number_of_global_nodes() << " m: " <<  in_G.number_of_global_edges()  << std::endl;
+                        //std::cout <<  "n: " <<  in_G.number_of_global_nodes() << " m: " <<  in_G.number_of_global_edges()  << std::endl;
                 }
 if( rank == ROOT ) std::cout<< __LINE__ << ", read graph " << std::endl;
 getFreeRam(MPI_COMM_WORLD, myMem, true);
-in_G.remove_high_degree_nodes();
+
                 //
                 // mapping activity : read processor tree if given 
                 //
@@ -138,15 +138,18 @@ in_G.remove_high_degree_nodes();
 		// 	  << " c = " << c << std::endl;
 
 		// std::vector<std::vector<NodeID>> edge_list; 
-		// in_G.get_removed_edges(node_list,edge_list);			
-		
+		// in_G.get_removed_edges(node_list,edge_list);
 
-		parallel_graph_access G(communicator);
-	        parallel_graph_access::copy_graph(in_G, G, communicator);
-		//parallel_graph_access::remove_edges_from_nodelist(in_G, G, node_list, communicator);
+        //another way me copy constructor 
+        //parallel_graph_access G(in_G );
+        //or assignment operator
+        //parallel_graph_access G = in_G;
 
-
-		
+        parallel_graph_access G(communicator);
+        //parallel_graph_access::copy_graph(in_G, G, communicator);
+        
+        std::vector<NodeID> node_list = in_G.get_high_degree_global_nodes(19);
+        parallel_graph_access::remove_edges_from_nodelist(in_G, G, node_list, communicator);
 
                 if( partition_config.refinement_focus ){
                         //in this version, the coarsening factor depends on the input size. As cluster_coarsening_factor sets a limit to the size
