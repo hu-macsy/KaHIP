@@ -365,7 +365,30 @@ public:
 		return m_max_node_degree;
 	}
 
-
+	// returns the removed edges
+	// based on a local list of nodes
+	
+	void get_removed_edges(std::vector< NodeID > & node_list,
+			       std::vector<std::vector<NodeID>> & edge_list
+			       ) {
+		if (!node_list.empty()) {
+			edge_list.resize(node_list.size());
+			for (int i = 0; i < node_list.size(); i++) {
+				NodeID node = node_list[i];
+				std::vector<NodeID> l = (*this).get_target_list(node_list[i]);
+				for( int j = 1; j < l.size(); j++) {
+					NodeID target = l[j];
+					edge_list[i].push_back(target);
+				}
+			}
+			// for ( const std::vector<NodeID> &v : edge_list )
+			// 	{
+			// 		for ( int x : v ) std::cout << x << ' ';
+			// 		std::cout << std::endl;
+			// 	}
+		}
+		
+	}
 
 
         // TODO: save the edge lists.
@@ -513,8 +536,18 @@ public:
 				edge_counter++;
 			} endfor
 				  } endfor
+				      
+
+	        // for (int i = 0; i < local_edge_lists.size(); i++) {
+		// 	std::cout << "R:" << rank << " node-local_edge_list: " << i << " ";
+		// 	for (int j = 0; j < local_edge_lists[i].size(); j++)
+		// 		std::cout <<  local_edge_lists[i][j] << "  ";
+		// 	std::cout << std::endl;
+		// }
 
 
+
+				      
 	  
 	        int t_edge_count = 0;
 		MPI_Allreduce(&edge_counter, &t_edge_count, 1, MPI_INT, MPI_SUM, communicator);
@@ -589,6 +622,8 @@ public:
 
         EdgeID get_first_edge(NodeID node);
         EdgeID get_first_invalid_edge(NodeID node);
+	std::vector<NodeID> get_target_list(NodeID node);
+	std::vector<EdgeWeight> get_target_weight_list(NodeID node);
 
         NodeID getNodeLabel(NodeID node); 
         void setNodeLabel(NodeID node, NodeID label); 
@@ -764,6 +799,28 @@ inline EdgeID parallel_graph_access::get_first_edge(NodeID node) {
         return m_nodes.at(node).firstEdge;
 #endif
 }
+
+
+inline std::vector<NodeID>  parallel_graph_access::get_target_list(NodeID node) {
+	
+	std::vector<NodeID> target_list;
+        forall_out_edges((*this), e, node) {
+	        NodeID v = (*this).getEdgeTarget(e);
+		target_list.push_back(v);
+	} endfor		  
+	return target_list;
+}
+
+inline std::vector< EdgeWeight > parallel_graph_access::get_target_weight_list(NodeID node) {
+
+	std::vector< NodeID > weight_list;
+        forall_out_edges((*this), e, node) {
+		EdgeWeight w = (*this).getEdgeWeight(e);
+                weight_list.push_back(w);
+        } endfor 
+	return weight_list;
+}
+
 
 inline EdgeID parallel_graph_access::get_first_invalid_edge(NodeID node) {
         return m_nodes[node+1].firstEdge;
