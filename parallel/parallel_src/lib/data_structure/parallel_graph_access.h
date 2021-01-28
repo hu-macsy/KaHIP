@@ -777,26 +777,6 @@ public:
 
         void reinit();
 
-        void remove_high_degree_nodes(){ // MPI_Comm comm, PPartitionConfig & partition_config ){
-            const NodeID num_local_nodes = number_of_global_nodes();
-            const NodeID num_local_edges = number_of_global_edges();
-            const double avg_degree =  num_local_edges/num_local_nodes;
-            const double allowed_degree = avg_degree*1.5;   //try 1.5
-const NodeID glob_mD = get_global_max_degree(m_communicator);
-int affected_nodes = 0;
-            forall_local_nodes((*this), node) {
-                const double node_degree = getNodeDegree(node);
-                //if this node has a higher degree than we allow
-                if (node_degree>allowed_degree){
-                    forall_out_edges((*this), e, node) {
-                        setEdgeWeight(e, 0.0); //neutralize this edge
-                    }endfor
-affected_nodes++;
-                } 
-            }endfor
-std::cout<< rank << ": affected_nodes " << affected_nodes << " \t=\t=\t=\t=\t=\t=\t allowed_degree "<< allowed_degree << " global_max_deg " << glob_mD << std::endl;
-        }
-
         /* ============================================================= */
         /* parallel graph data structure  */
         /* ============================================================= */
