@@ -378,9 +378,14 @@ public:
 	void get_localID_high_degree_nodes(std::vector< NodeID > & global_nodes,
 							   std::vector< NodeID > & local_nodes) {
 		if (!global_nodes.empty()) {
-			for (NodeID u = 0; u < global_nodes.size(); u++) {
-				if( from <= u && node <= u ) {
-					local_nodes.push_back(u - from);
+			std::cout << "blah from " << from << " to " << to << std::endl;
+			for (ULONG i = 0; i < global_nodes.size(); i++) {
+				NodeID u = global_nodes[i]; 
+				std::cout << "node " << u << std::endl;
+				if( from <= u && u <= to ) {
+					local_nodes.push_back((*this).getLocalID(u));
+					std::cout  <<" belongs to me "<< std::endl;
+					
 				}
 			}
 		}		
@@ -393,21 +398,27 @@ public:
 	// returns the removed edges
 	// based on a local list of nodes
 	void get_edges_high_degree_nodes(std::vector< NodeID > & nodes,
-					 std::vector<std::vector<NodeID>> edges) {
+					 std::vector<std::vector<NodeID>> &edges) {
 		if (!nodes.empty()) {
 			edges.resize(nodes.size());
 			for (int i = 0; i < nodes.size(); i++) {
+				std::cout << "retrieving edge list for  " << nodes[i] << std::endl;
 				std::vector<NodeID> l = (*this).get_target_list(nodes[i]);
+				std::cout << " l [ " ;
+				for (auto k = l.begin(); k != l.end(); ++k)
+					std::cout << *k << ' ';
+				std::cout  <<" ]"<< std::endl;
+
 				for( int j = 1; j < l.size(); j++) {
 					NodeID target = l[j];
 				        edges[i].push_back(target);
 				}
 			}
-			// for ( const std::vector<NodeID> &v : edge_list )
-			// 	{
-			// 		for ( int x : v ) std::cout << x << ' ';
-			// 		std::cout << std::endl;
-			// 	}
+			for ( const std::vector<NodeID> &v : edges )
+				{
+					for ( int x : v ) std::cout << x << ' ';
+					std::cout << std::endl;
+				}
 		}
 		
 	}
@@ -423,6 +434,23 @@ public:
 			NodeID node = local_nodes[i];
 			for (ULONG j = 0; j < edges[i].size(); ++j) {
 				NodeID target = edges[i][j];
+				EdgeID e1 = (*this).new_edge(node, target);
+				//EdgeWeight weight = weights[i][j];
+				//(*this).setEdgeWeight(e, weight);
+			}
+	  
+		}
+		
+	}
+
+	void add_edges(std::vector< NodeID > & global_nodes,std::vector< NodeID > & local_nodes,
+		       std::vector<std::vector<NodeID>> &edges) {
+		//std::vector<std::vector<EdgeWeight>> weights = get_weights_high_degree_nodes(local_nodes);
+
+		for ( ULONG i = 0; i < local_nodes.size(); i++) {
+			NodeID node = local_nodes[i];
+			for (ULONG j = 0; j < edges[i].size(); ++j) {
+				NodeID target = edges[i][j];
 				EdgeID e = (*this).new_edge(node, target);
 				//EdgeWeight weight = weights[i][j];
 				//(*this).setEdgeWeight(e, weight);
@@ -432,7 +460,7 @@ public:
 		
 	}
 
-
+	
 	
 
 
@@ -859,7 +887,7 @@ inline std::vector<NodeID>  parallel_graph_access::get_target_list(NodeID node) 
 	std::vector<NodeID> target_list;
         forall_out_edges((*this), e, node) {
 	        NodeID v = (*this).getEdgeTarget(e);
-		target_list.push_back(v);
+		target_list.push_back((*this).getNodeLabel(v));
 	} endfor		  
 	return target_list;
 }

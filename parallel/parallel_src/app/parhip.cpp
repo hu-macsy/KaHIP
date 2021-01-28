@@ -111,54 +111,53 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 }
 
 	        NodeID global_max_degree = 0;
-		NodeID local_max_degree  = in_G.get_local_max_degree();
-		
+		NodeID local_max_degree  = in_G.get_local_max_degree();		
 		MPI_Allreduce(&local_max_degree, &global_max_degree, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, communicator);
-		std::cout << " R  = " << rank << " local max " << local_max_degree
-			  << " global max " << global_max_degree << std::endl;
+		// std::cout << " R  = " << rank << " local max " << local_max_degree
+		// 	  << " global max " << global_max_degree << std::endl;
 
 
 		/******************* ignore *************************/
-		int c = 0;
-		NodeID local_node_bound = (NodeID) ceil((in_G.number_of_global_nodes()*0.1)/size);
-		// local node_list for each PE
-		std::vector<NodeID> node_list;
-		//		NodeID degree_bound = (NodeID) (global_max_degree*0.9);
-		// temporarily -- for testing
-		 NodeID degree_bound = (NodeID) (local_max_degree*0.9);
-		// forall_local_nodes(in_G,n) {
-		// 	if (c > local_node_bound) break;
-		// 	if (in_G.getNodeDegree(n) > degree_bound) {
-		// 		node_list.push_back(n);
-		// 		c++;
-		// 	}
-		// } endfor
-		    
-		// std::cout << " local_node_bound  = " << local_node_bound
-		// 	  << " max_degree  = "  << in_G.get_local_max_degree()
-		// 	  << " degree_bound  = "  << degree_bound
-		// 	  << " c = " << c << std::endl;
+		std::vector<NodeID> global_nodes;
+		//  NodeID degree_bound = (NodeID) (local_max_degree*0.9);
+		//  global_nodes.push_back(3);
+		//  global_nodes.push_back(8);
+		//  global_nodes.push_back(6);
+		//  if (rank == ROOT) {
+		// 	 std::cout  <<" [";
+		// 	 for (auto i = global_nodes.begin(); i != global_nodes.end(); ++i)
+		// 		 std::cout << *i << ' ';
+		// 	 std::cout  <<" ]"<< std::endl;
+		//  }
 
-		// std::cout << " Rank  = " << rank
-		// 	  << " node list [ "  << std::endl;
-		// for (auto i = node_list.begin(); i != node_list.end(); ++i)
-		// 	std::cout << *i << ' ';
-		// std::cout  <<" ]"<< std::endl;
+		std::vector<std::vector<NodeID>> edges;
+	        std::vector<NodeID> local_nodes;
 
-
-		std::vector<std::vector<NodeID>> edge_list; 
-		//in_G.get_removed_edges(node_list,edge_list);			
+		in_G.get_localID_high_degree_nodes(global_nodes,local_nodes);
+		in_G.get_edges_high_degree_nodes(local_nodes, edges);
+		
+		std::cout << " Rank  = " << rank
+			  << " local nodes [ "  << std::endl;
+		for (auto i = local_nodes.begin(); i != local_nodes.end(); ++i)
+			std::cout << *i << ' ';
+		std::cout  <<" ]"<< std::endl;
+		std::cout << " edges [ "  << std::endl;
+		for ( const std::vector<NodeID> &v : edges )
+			{
+				for ( int x : v ) std::cout << x << ' ';
+				std::cout << std::endl;
+			}
 		/******************* ignore *************************/
 
 
 		parallel_graph_access G(communicator);
 	        parallel_graph_access::get_graph_copy(in_G, G, communicator);
-		//parallel_graph_access::get_reduced_graph(in_G, G, node_list, communicator);
+		//parallel_graph_access::get_reduced_graph(in_G, G, global_nodes, communicator);
 		if (rank==ROOT)
 			std::cout << " ============     Copying graph  =========== " <<  std::endl;
-
 		
-
+		
+		
                 if( partition_config.refinement_focus ){
                         //in this version, the coarsening factor depends on the input size. As cluster_coarsening_factor sets a limit to the size
                         //of the clusters when coarsening, it should be more than 2, thus, coarsening_factor should be greater than 2
@@ -187,7 +186,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 partition_config.stop_factor /= partition_config.k;
                 
                 MPI_Barrier(MPI_COMM_WORLD); //for better printing
-
+		
                 //TODO: what to do when distance and hierarchy is not given
                 //update: flag partition_config.integrated_mapping is set to true; use this flag later in refinement
                 
@@ -197,8 +196,8 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 distributed_partitioner::generate_random_choices( partition_config );
 
                 //G.printMemoryUsage(std::cout);
-if( rank == ROOT ) std::cout<< __LINE__ << ", allocated data structs" << std::endl;
-getFreeRam(MPI_COMM_WORLD, myMem, true);
+		if( rank == ROOT ) std::cout<< __LINE__ << ", allocated data structs" << std::endl;
+		getFreeRam(MPI_COMM_WORLD, myMem, true);
                 //compute some stats
                 EdgeWeight interPEedges = 0;
                 EdgeWeight localEdges = 0;
@@ -213,9 +212,9 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                                         localEdges++;
                                 }
                         } endfor
-                } endfor
+		} endfor
 
-                EdgeWeight globalInterEdges = 0;
+		EdgeWeight globalInterEdges = 0;
                 EdgeWeight globalIntraEdges = 0;
                 EdgeWeight globalWeight = 0;
                 MPI_Reduce(&interPEedges, &globalInterEdges, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, communicator);
@@ -263,6 +262,15 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 if( rank == ROOT ) std::cout<< __LINE__ << ", finished partitioning " << std::endl;
 getFreeRam(MPI_COMM_WORLD, myMem, true);
+ 
+                // Important: we do not add edges to the graph (anyway m_building_graph must be true to add_edge())
+		// We simple copy the calculated partition to the original graph and continue with that.
+
+                forall_local_nodes(G, node) {
+			ULONG block = G.getNodeLabel(node);
+			in_G.setNodeLabel(node, block);
+		} endfor
+			  
 
                 //qm.evaluateMapping(G, PEtree, communicator);
 
@@ -275,6 +283,8 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 PRINT(double balance_load  = qm.balance_load( partition_config, G, communicator );)
                 PRINT(double balance_load_dist  = qm.balance_load_dist( partition_config, G, communicator );)
 
+
+		
 
                 if( rank == ROOT ) {
 
