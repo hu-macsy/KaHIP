@@ -182,6 +182,8 @@ int parallel_graph_io::readGraphWeightedFlexible(parallel_graph_access & G,
                 }
         }
 
+
+
         G.finish_construction();
         MPI_Barrier(communicator);
 
