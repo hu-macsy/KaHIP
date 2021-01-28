@@ -96,7 +96,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 //parallel_graph_io::readGraphWeightedFlexible(G, graph_filename, rank, size, communicator);
                 if( rank == ROOT ){
                         std::cout <<  "took " <<  t.elapsed()  << std::endl;
-                        std::cout <<  "n: " <<  in_G.number_of_global_nodes() << " m: " <<  in_G.number_of_global_edges()  << std::endl;
+                        //std::cout <<  "n: " <<  in_G.number_of_global_nodes() << " m: " <<  in_G.number_of_global_edges()  << std::endl;
                 }
 		if( rank == ROOT ) std::cout<< __LINE__ << ", read graph " << std::endl;
 		getFreeRam(MPI_COMM_WORLD, myMem, true);
@@ -115,9 +115,6 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 	        NodeID global_max_degree = 0;
 		NodeID local_max_degree  = in_G.get_local_max_degree();		
 		MPI_Allreduce(&local_max_degree, &global_max_degree, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, communicator);
-		// std::cout << " R  = " << rank << " local max " << local_max_degree
-		// 	  << " global max " << global_max_degree << std::endl;
-
 
 		/******************* ignore *************************/
 		// std::vector<NodeID> global_nodes;
@@ -131,13 +128,13 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		// // 		 std::cout << *i << ' ';
 		// // 	 std::cout  <<" ]"<< std::endl;
 		// //  }
-
 		// std::vector<std::vector<NodeID>> edges;
 	        // std::vector<NodeID> local_nodes;
 
 		// in_G.get_localID_high_degree_nodes(global_nodes,local_nodes);
 		// in_G.get_edges_high_degree_nodes(local_nodes, edges);
 		
+
 		// std::cout << " Rank  = " << rank
 		// 	  << " local nodes [ "  << std::endl;
 		// for (auto i = local_nodes.begin(); i != local_nodes.end(); ++i)
@@ -153,8 +150,10 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 
 		parallel_graph_access G(communicator);
+
 	        parallel_graph_access::get_graph_copy(in_G, G, communicator);
 		//parallel_graph_access::get_reduced_graph(in_G, G, global_nodes, communicator);
+
 		if (rank==ROOT)
 			std::cout << " ============     Copying graph  =========== " <<  std::endl;
 		

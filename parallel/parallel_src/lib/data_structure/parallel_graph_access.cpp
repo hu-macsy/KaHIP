@@ -18,13 +18,18 @@ parallel_graph_access::parallel_graph_access( MPI_Comm communicator ) : m_num_lo
                                                  to(0),
                                                  m_num_ghost_nodes(0), m_local_max_node_degree(0), m_bm(NULL) {
 
-
                 m_communicator = communicator;
                 MPI_Comm_rank( m_communicator, &rank);
                 MPI_Comm_size( m_communicator, &size);
                 
                 m_gnc = new ghost_node_communication(m_communicator);
                 m_gnc->setGraphReference(this);
+}
+
+//TODO?: provide copy constructor and assignment operator
+/*
+parallel_graph_access::parallel_graph_access( parallel_graph_access& other ){
+    *this=other;
 }
 
 parallel_graph_access& parallel_graph_access::operator=( parallel_graph_access& G ){
@@ -52,6 +57,7 @@ parallel_graph_access& parallel_graph_access::operator=( parallel_graph_access& 
 
         return *this;
 };
+*/
 
 parallel_graph_access::~parallel_graph_access() {
         m_comm_rounds = std::min(m_comm_rounds, m_comm_rounds_up); 
@@ -98,3 +104,47 @@ void parallel_graph_access::set_comm_rounds_up(ULONG comm_rounds) {
         m_comm_rounds_up = comm_rounds;
 }
 
+/** Return all global node IDs with degree > minDegree for the local nodes.
+*/
+std::vector<NodeID> parallel_graph_access::get_high_degree_local_nodes(const NodeID minDegree) {
+    std::vector<NodeID> local_high_degree_nodes;
+
+    forall_local_nodes((*this), node) {
+        const double node_degree = getNodeDegree(node); //TODO: change to ghost_degree?
+        //if this node has a higher degree than we allow
+        if (node_degree>minDegree){
+            assert( is_local_node(node) );
+            local_high_degree_nodes.push_back( getGlobalID(node) );
+        } 
+    }endfor
+    
+    return local_high_degree_nodes;
+}
+
+std::vector<NodeID> parallel_graph_access::get_high_degree_global_nodes(const NodeID minDegree) {
+    
+    std::vector<NodeID> local_high_degree_nodes = get_high_degree_local_nodes(minDegree);
+
+    //from the local high degree nodes we need to construct a replicated vector with all nodes
+    const int num_local_hdn = local_high_degree_nodes.size();
+
+    //gather the number of nodes in the root
+    std::vector<int> hdn_root( size );
+    MPI_Gather( &num_local_hdn, 1, MPI_INT, hdn_root.data(), 1, MPI_INT, ROOT, m_communicator );
+
+    //calculate prefix sum, aka displacement
+    std::vector<int> displ( size, 0 );              //we do not need the last element
+    for( unsigned int i=1; i<size; i++){
+        displ[i] = displ[i-1]+ hdn_root[i-1] ;   //TODO/CHECK: is the +1 needed?
+    }
+
+    std::vector<NodeID> all_hdn;
+    if( rank==ROOT){
+        all_hdn.resize( displ.back()+hdn_root.back() );
+    }
+
+    MPI_Gatherv( local_high_degree_nodes.data(), num_local_hdn, MPI_UNSIGNED_LONG_LONG, \
+        all_hdn.data(), hdn_root.data(), displ.data(), MPI_UNSIGNED_LONG_LONG, ROOT, m_communicator );
+
+    return all_hdn;
+}
