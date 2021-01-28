@@ -96,8 +96,8 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         std::cout <<  "took " <<  t.elapsed()  << std::endl;
                         //std::cout <<  "n: " <<  in_G.number_of_global_nodes() << " m: " <<  in_G.number_of_global_edges()  << std::endl;
                 }
-if( rank == ROOT ) std::cout<< __LINE__ << ", read graph " << std::endl;
-getFreeRam(MPI_COMM_WORLD, myMem, true);
+		if( rank == ROOT ) std::cout<< __LINE__ << ", read graph " << std::endl;
+		getFreeRam(MPI_COMM_WORLD, myMem, true);
 
                 //
                 // mapping activity : read processor tree if given 
@@ -110,20 +110,22 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         }
                 }
 
-	        // NodeID global_max_degree = 0;
-		// NodeID local_max_degree  = in_G.get_max_degree();
+	        NodeID global_max_degree = 0;
+		NodeID local_max_degree  = in_G.get_local_max_degree();
 		
-		// MPI_Allreduce(&local_max_degree, &global_max_degree, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, communicator);
-		// std::cout << " R  = " << rank << " local max " << local_max_degree
-		// 	  << " global max " << global_max_degree << std::endl;
+		MPI_Allreduce(&local_max_degree, &global_max_degree, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, communicator);
+		std::cout << " R  = " << rank << " local max " << local_max_degree
+			  << " global max " << global_max_degree << std::endl;
 
 
-		
-		// int c = 0;
-		// NodeID local_node_bound = (NodeID) ceil((in_G.number_of_global_nodes()*0.1)/size);
-		// // local node_list for each PE
-		// std::vector<NodeID> node_list;
-		// NodeID degree_bound = (NodeID) (global_max_degree*0.9);
+		/******************* ignore *************************/
+		int c = 0;
+		NodeID local_node_bound = (NodeID) ceil((in_G.number_of_global_nodes()*0.1)/size);
+		// local node_list for each PE
+		std::vector<NodeID> node_list;
+		//		NodeID degree_bound = (NodeID) (global_max_degree*0.9);
+		// temporarily -- for testing
+		 NodeID degree_bound = (NodeID) (local_max_degree*0.9);
 		// forall_local_nodes(in_G,n) {
 		// 	if (c > local_node_bound) break;
 		// 	if (in_G.getNodeDegree(n) > degree_bound) {
@@ -131,25 +133,33 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		// 		c++;
 		// 	}
 		// } endfor
-		
+		    
 		// std::cout << " local_node_bound  = " << local_node_bound
-		// 	  << " max_degree  = "  << in_G.get_max_degree()
+		// 	  << " max_degree  = "  << in_G.get_local_max_degree()
 		// 	  << " degree_bound  = "  << degree_bound
 		// 	  << " c = " << c << std::endl;
 
-		// std::vector<std::vector<NodeID>> edge_list; 
-		// in_G.get_removed_edges(node_list,edge_list);
+		// std::cout << " Rank  = " << rank
+		// 	  << " node list [ "  << std::endl;
+		// for (auto i = node_list.begin(); i != node_list.end(); ++i)
+		// 	std::cout << *i << ' ';
+		// std::cout  <<" ]"<< std::endl;
 
-        //another way me copy constructor 
-        //parallel_graph_access G(in_G );
-        //or assignment operator
-        //parallel_graph_access G = in_G;
 
-        parallel_graph_access G(communicator);
-        //parallel_graph_access::copy_graph(in_G, G, communicator);
-        
-        std::vector<NodeID> node_list = in_G.get_high_degree_global_nodes(19);
-        parallel_graph_access::remove_edges_from_nodelist(in_G, G, node_list, communicator);
+		std::vector<std::vector<NodeID>> edge_list; 
+		//in_G.get_removed_edges(node_list,edge_list);			
+		/******************* ignore *************************/
+
+
+		parallel_graph_access G(communicator);
+	        //parallel_graph_access::get_graph_copy(in_G, G, communicator);
+                std::vector<NodeID> node_list = in_G.get_high_degree_global_nodes(19);
+                parallel_graph_access::get_reduced_graph(in_G, G, node_list, communicator);
+		
+		if (rank==ROOT)
+			std::cout << " ============     Copying graph  =========== " <<  std::endl;
+
+		
 
                 if( partition_config.refinement_focus ){
                         //in this version, the coarsening factor depends on the input size. As cluster_coarsening_factor sets a limit to the size

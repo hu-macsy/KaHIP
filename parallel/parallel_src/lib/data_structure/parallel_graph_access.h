@@ -377,20 +377,32 @@ public:
                 return global_max_degree;
         }
 
+	void get_localID_high_degree_nodes(std::vector< NodeID > & global_nodes,
+							   std::vector< NodeID > & local_nodes) {
+		if (!global_nodes.empty()) {
+			for (NodeID u = 0; u < global_nodes.size(); u++) {
+				if( from <= u && node <= u ) {
+					local_nodes.push_back(u - from);
+				}
+			}
+		}		
+		for ( auto i = local_nodes.begin(); i != local_nodes.end(); i++) 
+			std::cout << *i << ' ';
+		std::cout << std::endl;
+	}
+
+	
 	// returns the removed edges
 	// based on a local list of nodes
-	
-	void get_removed_edges(std::vector< NodeID > & node_list,
-			       std::vector<std::vector<NodeID>> & edge_list
-			       ) {
-		if (!node_list.empty()) {
-			edge_list.resize(node_list.size());
-			for (int i = 0; i < node_list.size(); i++) {
-//NodeID node = node_list[i];
-				std::vector<NodeID> l = (*this).get_target_list(node_list[i]);
+	void get_edges_high_degree_nodes(std::vector< NodeID > & nodes,
+					 std::vector<std::vector<NodeID>> edges) {
+		if (!nodes.empty()) {
+			edges.resize(nodes.size());
+			for (int i = 0; i < nodes.size(); i++) {
+				std::vector<NodeID> l = (*this).get_target_list(nodes[i]);
 				for( int j = 1; j < l.size(); j++) {
 					NodeID target = l[j];
-					edge_list[i].push_back(target);
+				        edges[i].push_back(target);
 				}
 			}
 			// for ( const std::vector<NodeID> &v : edge_list )
@@ -402,19 +414,50 @@ public:
 		
 	}
 
+	void add_edges(std::vector< NodeID > & global_nodes) {
+		std::vector< NodeID > local_nodes;
+		std::vector<std::vector<NodeID>> edges; 
+		get_localID_high_degree_nodes(global_nodes,local_nodes);
+		get_edges_high_degree_nodes(local_nodes,edges);
+		//std::vector<std::vector<EdgeWeight>> weights = get_weights_high_degree_nodes(local_nodes);
 
-        // TODO: save the edge lists.
+		for ( ULONG i = 0; i < local_nodes.size(); i++) {
+			NodeID node = local_nodes[i];
+			for (ULONG j = 0; j < edges[i].size(); ++j) {
+				NodeID target = edges[i][j];
+				EdgeID e = (*this).new_edge(node, target);
+				//EdgeWeight weight = weights[i][j];
+				//(*this).setEdgeWeight(e, weight);
+			}
+	  
+		}
+		
+	}
+
+
+	
+
+
         // node_lists is a list of global indexes for nodes.
-        // Those nodes keep only one adjacent edge and the rest are removed.
-        // add checks if node_lists is empty  
+        // Those nodes keep only the first adjacent edge and the rest are removed.
 
-	static int remove_edges_from_nodelist(parallel_graph_access & inG, parallel_graph_access & outG, std::vector< NodeID > & node_list, MPI_Comm communicator) {
+
+	static int get_reduced_graph(parallel_graph_access & inG, parallel_graph_access & outG, std::vector< NodeID > node_list, MPI_Comm communicator) {
 		int rank, comm_size;
 		MPI_Comm_rank( communicator, &rank);
 		MPI_Comm_size( communicator, &comm_size);
 		NodeID global_nnodes = inG.number_of_global_nodes();
 		NodeID local_nnodes = inG.number_of_local_nodes();
 
+		if(node_list.empty()) {
+			// TODO: find more elegant way to do it.
+			get_graph_copy(inG, outG, communicator);
+			if (rank == ROOT)
+				std::cout << "Rank = " << rank << " : Empty node_list!" << std::endl;
+			return 0;
+		}
+			
+		
 		// TODO: less memory.. (maybe number of ghosts)
 		std::vector<bool> is_high_degree_node(global_nnodes, false);
 		for(auto& u : node_list)
@@ -467,12 +510,12 @@ public:
 			  
 	 
 	      
-			  // for (int i = 0; i < local_edge_lists.size(); i++) {
-			  //   std::cout << "R:" << rank << " node-local_edge_list: " << i << " ";
-			  //   for (int j = 0; j < local_edge_lists[i].size(); j++)
-			  //     std::cout <<  local_edge_lists[i][j] << "  ";
-			  //   std::cout << std::endl;
-			  // }
+	       for (int i = 0; i < local_edge_lists.size(); i++) {
+		       std::cout << "R:" << rank << " node-local_edge_list: " << i << " ";
+		       for (int j = 0; j < local_edge_lists[i].size(); j++)
+			       std::cout <<  local_edge_lists[i][j] << "  ";
+		       std::cout << std::endl;
+	       }
 
 
 
@@ -514,11 +557,14 @@ public:
 }
   
 
-	static int copy_graph(parallel_graph_access & inG, parallel_graph_access & outG, MPI_Comm communicator) {
+	static int get_graph_copy(parallel_graph_access & inG, parallel_graph_access & outG, MPI_Comm communicator) {
+
+
 
 		int rank, comm_size;
 		MPI_Comm_rank( communicator, &rank);
 		MPI_Comm_size( communicator, &comm_size);
+		
 		NodeID global_nnodes = inG.number_of_global_nodes();
 	  
 	 	
@@ -555,11 +601,7 @@ public:
 		// 	for (int j = 0; j < local_edge_lists[i].size(); j++)
 		// 		std::cout <<  local_edge_lists[i][j] << "  ";
 		// 	std::cout << std::endl;
-		// }
-
-
-
-				      
+		// }		      
 	  
 	        int t_edge_count = 0;
 		MPI_Allreduce(&edge_counter, &t_edge_count, 1, MPI_INT, MPI_SUM, communicator);
@@ -739,26 +781,6 @@ public:
         }
 
         void reinit();
-
-        void remove_high_degree_nodes(){ // MPI_Comm comm, PPartitionConfig & partition_config ){
-            const NodeID num_local_nodes = number_of_global_nodes();
-            const NodeID num_local_edges = number_of_global_edges();
-            const double avg_degree =  num_local_edges/num_local_nodes;
-            const double allowed_degree = avg_degree*1.5;   //try 1.5
-const NodeID glob_mD = get_global_max_degree(m_communicator);
-int affected_nodes = 0;
-            forall_local_nodes((*this), node) {
-                const double node_degree = getNodeDegree(node);
-                //if this node has a higher degree than we allow
-                if (node_degree>allowed_degree){
-                    forall_out_edges((*this), e, node) {
-                        setEdgeWeight(e, 0.0); //neutralize this edge
-                    }endfor
-affected_nodes++;
-                } 
-            }endfor
-std::cout<< rank << ": affected_nodes " << affected_nodes << " \t=\t=\t=\t=\t=\t=\t allowed_degree "<< allowed_degree << " global_max_deg " << glob_mD << std::endl;
-        }
 
         /* ============================================================= */
         /* parallel graph data structure  */
