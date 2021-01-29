@@ -112,9 +112,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         }
                 }
 
-	        NodeID global_max_degree = 0;
-		NodeID local_max_degree  = in_G.get_local_max_degree();		
-		MPI_Allreduce(&local_max_degree, &global_max_degree, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, communicator);
+        const NodeID global_max_degree = in_G.get_global_max_degree(communicator);
 
 		/******************* ignore *************************/
 		// std::vector<NodeID> global_nodes;
@@ -149,10 +147,10 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		/******************* ignore *************************/
 
 
-		parallel_graph_access G(communicator);
-
-	        parallel_graph_access::get_graph_copy(in_G, G, communicator);
-		//parallel_graph_access::get_reduced_graph(in_G, G, global_nodes, communicator);
+        parallel_graph_access G(communicator);
+        parallel_graph_access::get_graph_copy(in_G, G, communicator);
+        std::vector<NodeID> global_hdn = G.get_high_degree_global_nodes( global_max_degree*0.8 );
+        parallel_graph_access::get_reduced_graph(in_G, G, global_hdn, communicator);
 
 		if (rank==ROOT)
 			std::cout << " ============     Copying graph  =========== " <<  std::endl;

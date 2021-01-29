@@ -431,7 +431,7 @@ public:
 		get_localID_high_degree_nodes(global_nodes,local_nodes);
 		get_edges_high_degree_nodes(local_nodes,edges);
 		//std::vector<std::vector<EdgeWeight>> weights = get_weights_high_degree_nodes(local_nodes);
-
+/*
 		for ( ULONG i = 0; i < local_nodes.size(); i++) {
 			NodeID node = local_nodes[i];
 			for (ULONG j = 0; j < edges[i].size(); ++j) {
@@ -440,15 +440,14 @@ public:
 				//EdgeWeight weight = weights[i][j];
 				//(*this).setEdgeWeight(e, weight);
 			}
-	  
 		}
-		
+*/
 	}
 
 	void add_edges(std::vector< NodeID > & global_nodes,std::vector< NodeID > & local_nodes,
 		       std::vector<std::vector<NodeID>> &edges) {
 		//std::vector<std::vector<EdgeWeight>> weights = get_weights_high_degree_nodes(local_nodes);
-
+/*
 		for ( ULONG i = 0; i < local_nodes.size(); i++) {
 			NodeID node = local_nodes[i];
 			for (ULONG j = 0; j < edges[i].size(); ++j) {
@@ -459,7 +458,7 @@ public:
 			}
 	  
 		}
-		
+*/
 	}
 
 	
