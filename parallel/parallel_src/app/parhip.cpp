@@ -148,12 +148,20 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 
         parallel_graph_access G(communicator);
-        parallel_graph_access::get_graph_copy(in_G, G, communicator);
         std::vector<NodeID> global_hdn = G.get_high_degree_global_nodes( global_max_degree*0.8 );
-        parallel_graph_access::get_reduced_graph(in_G, G, global_hdn, communicator);
-
+	if(global_hdn.empty()) {
+		// TODO: find more elegant way to do it.
+		parallel_graph_access::get_graph_copy(in_G, G, communicator);
+		if (rank == ROOT)
+			std::cout << "WARNING : Empty list of high degree nodes! Copying graph instead."
+				  << std::endl;
+	} else {
+		parallel_graph_access::get_reduced_graph(in_G, G, global_hdn, communicator);
 		if (rank==ROOT)
-			std::cout << " ============     Copying graph  =========== " <<  std::endl;
+			std::cout << " ============  Reducing graph  =========== " <<  std::endl;
+	}
+
+
 		
 		
 		
