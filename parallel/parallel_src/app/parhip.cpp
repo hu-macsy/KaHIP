@@ -148,15 +148,22 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 
         parallel_graph_access G(communicator);
-        //parallel_graph_access::get_graph_copy(in_G, G, communicator);
-        std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*1.5 );
-std::cout << " == " << global_hdn.size() <<  " _=_ " << global_max_degree*0.5 << std::endl;
-        parallel_graph_access::get_reduced_graph(in_G, G, global_hdn, communicator);
-
+        std::vector<NodeID> global_hdn = G.get_high_degree_global_nodes( global_max_degree*0.8 );
+	if(global_hdn.empty()) {
+		// TODO: find more elegant way to do it.
+		parallel_graph_access::get_graph_copy(in_G, G, communicator);
+		if (rank == ROOT)
+			std::cout << "WARNING : Empty list of high degree nodes! Copying graph instead."
+				  << std::endl;
+	} else {
+		parallel_graph_access::get_reduced_graph(in_G, G, global_hdn, communicator);
 		if (rank==ROOT)
-			std::cout << " ============     Copying graph  =========== " <<  std::endl;
-if( rank == ROOT ) std::cout<< __LINE__ << ", G= " <<  G.number_of_global_nodes() << ", " << G.number_of_global_edges() << " ___ "  << ", in_G= " <<  in_G.number_of_global_nodes() << ", " << in_G.number_of_global_edges()<< std::endl;
-		
+			std::cout << " ============  Reducing graph  =========== " <<  std::endl;
+	}
+
+                assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
+                assert( G.number_of_local_edges() <= in_G.number_of_local_edges() );    //edges are less or equal
+
                 if( partition_config.refinement_focus ){
                         //in this version, the coarsening factor depends on the input size. As cluster_coarsening_factor sets a limit to the size
                         //of the clusters when coarsening, it should be more than 2, thus, coarsening_factor should be greater than 2

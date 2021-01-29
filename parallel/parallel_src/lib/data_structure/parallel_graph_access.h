@@ -470,19 +470,12 @@ public:
 
 
 	static int get_reduced_graph(parallel_graph_access & inG, parallel_graph_access & outG, std::vector< NodeID > node_list, MPI_Comm communicator) {
-		int rank, comm_size;
+		assert(!node_list.empty());
+	        int rank, comm_size;
 		MPI_Comm_rank( communicator, &rank);
 		MPI_Comm_size( communicator, &comm_size);
 		NodeID global_nnodes = inG.number_of_global_nodes();
 		NodeID local_nnodes = inG.number_of_local_nodes();
-
-		if(node_list.empty()) {
-			// TODO: find more elegant way to do it.
-			get_graph_copy(inG, outG, communicator);
-			if (rank == ROOT)
-				std::cout << "Rank = " << rank << " : Empty node_list!" << std::endl;
-			return 0;
-		}
 			
 		
 		// TODO: less memory.. (maybe number of ghosts)
@@ -857,8 +850,8 @@ private:
         static ULONG m_comm_rounds; // global number of edges
         static ULONG m_comm_rounds_up; // global number of edges
 
-        NodeID m_local_max_node_degree;
-        NodeID m_cur_degree;
+        NodeID m_local_max_node_degree=0;
+        NodeID m_cur_degree=0;
 
         PEID size;
         PEID rank;
