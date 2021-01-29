@@ -61,14 +61,12 @@ public:
 	void evaluateMappingDEBUG(parallel_graph_access & C, const processor_tree & PEtree,
 			      MPI_Comm communicator);
 
-	
-	
 private: 
 
         EdgeWeight initial_qap, initial_cut, initial_numEdges=0;
         std::vector< double > ml_time;
-	int max_congestion, max_dilation, sum_dilation = 0;
-	double avg_dilation = 0.0;
+        int max_congestion, max_dilation, sum_dilation = 0;
+        double avg_dilation = 0.0;
         NodeWeight initial_numNodes = 0;
 
 };
