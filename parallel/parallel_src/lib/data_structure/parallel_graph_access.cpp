@@ -119,9 +119,31 @@ std::vector<NodeID> parallel_graph_access::get_high_degree_local_nodes(const Nod
     return local_high_degree_nodes;
 }
 
-std::vector<NodeID> parallel_graph_access::get_high_degree_global_nodes(const NodeID minDegree) {
+std::vector<NodeID> parallel_graph_access::get_high_ghost_degree_local_nodes(const NodeID minDegree) {
+    std::vector<NodeID> local_high_degree_nodes;
+    std::vector<NodeID> ghostDeg = get_local_ghost_degrees();
+    assert( ghostDeg.size() == number_of_local_nodes() );
+
+    forall_local_nodes((*this), node) {
+        const double node_degree = ghostDeg[node]; //TODO: change to ghost_degree?
+        //if this node has a higher degree than we allow
+        if (node_degree>minDegree){
+            assert( is_local_node(node) );
+            local_high_degree_nodes.push_back( getGlobalID(node) );
+        } 
+    }endfor
     
-    std::vector<NodeID> local_high_degree_nodes = get_high_degree_local_nodes(minDegree);
+    return local_high_degree_nodes;
+}
+
+std::vector<NodeID> parallel_graph_access::get_high_degree_global_nodes(const NodeID minDegree, const bool useGhostDegree ) {
+    
+    std::vector<NodeID> local_high_degree_nodes;
+    if( useGhostDegree ){
+        local_high_degree_nodes = get_high_ghost_degree_local_nodes(minDegree);
+    }else{
+        local_high_degree_nodes = get_high_degree_local_nodes(minDegree);
+    }
 
     //from the local high degree nodes we need to construct a replicated vector with all nodes
     const int num_local_hdn = local_high_degree_nodes.size();
@@ -152,22 +174,36 @@ std::vector<NodeID> parallel_graph_access::get_high_degree_global_nodes(const No
 
     return all_hdn;
 }
- 
+
+std::vector<NodeID> parallel_graph_access::get_local_ghost_degrees(){
+    std::vector<NodeID> ghost_degrees( number_of_local_nodes() );
+    forall_local_nodes( (*this), node) {
+        NodeID gDeg = 0;
+        forall_out_edges( (*this), e, node) {
+            NodeID target = getEdgeTarget(e);
+            if(!is_local_node(target)) {
+                gDeg++;
+            }
+        } endfor
+        ghost_degrees[node] = gDeg;
+    }endfor
+    return ghost_degrees;
+}
 
 std::tuple<EdgeWeight,EdgeWeight,NodeWeight> parallel_graph_access::get_ghostEdges_nodeWeight(){
     EdgeWeight interPEedges = 0;
     EdgeWeight localEdges = 0;
     NodeWeight localWeight = 0;
     forall_local_nodes( (*this), node) {
-            localWeight += getNodeWeight(node);
-            forall_out_edges( (*this), e, node) {
-                    NodeID target = getEdgeTarget(e);
-                    if(!is_local_node(target)) {
-                            interPEedges++;
-                    } else {
-                            localEdges++;
-                    }
-            } endfor
+        localWeight += getNodeWeight(node);
+        forall_out_edges( (*this), e, node) {
+            NodeID target = getEdgeTarget(e);
+            if(!is_local_node(target)) {
+                interPEedges++;
+            } else {
+                localEdges++;
+            }
+        } endfor
     } endfor
 
     EdgeWeight globalInterEdges = 0;

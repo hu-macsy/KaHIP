@@ -148,7 +148,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 
         parallel_graph_access G(communicator);
-        std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.6 );
+        std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.8 , true );
  
 	if(global_hdn.empty()) {
 		// TODO: find more elegant way to do it.
@@ -268,6 +268,9 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         in_G.setSecondPartitionIndex(node, secondPartInd);
                 } endfor
 
+                //make sure data distribution has not changed
+                assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
+                assert( G.number_of_local_edges() <= in_G.number_of_local_edges() );    //edges are less or equal
 		// PERFORM ADDITIONAL REF ROUND
 		// TODO:  SET THE PARTITION_CONFIG AS IT SHOULD BE!
 		// parallel_label_compress< std::vector< NodeWeight> > plc_refinement;
