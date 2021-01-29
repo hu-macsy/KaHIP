@@ -529,14 +529,14 @@ public:
 		} endfor
 			  
 	 
-	      
+	      /*
 	       for (int i = 0; i < local_edge_lists.size(); i++) {
 		       std::cout << "R:" << rank << " node-local_edge_list: " << i << " ";
 		       for (int j = 0; j < local_edge_lists[i].size(); j++)
 			       std::cout <<  local_edge_lists[i][j] << "  ";
 		       std::cout << std::endl;
 	       }
-
+        */
 
 
 	  
@@ -850,8 +850,8 @@ private:
         static ULONG m_comm_rounds; // global number of edges
         static ULONG m_comm_rounds_up; // global number of edges
 
-        NodeID m_local_max_node_degree;
-        NodeID m_cur_degree;
+        NodeID m_local_max_node_degree=0;
+        NodeID m_cur_degree=0;
 
         PEID size;
         PEID rank;

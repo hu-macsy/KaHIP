@@ -144,5 +144,12 @@ std::vector<NodeID> parallel_graph_access::get_high_degree_global_nodes(const No
     MPI_Gatherv( local_high_degree_nodes.data(), num_local_hdn, MPI_UNSIGNED_LONG_LONG, \
         all_hdn.data(), hdn_root.data(), displ.data(), MPI_UNSIGNED_LONG_LONG, ROOT, m_communicator );
 
+    //send all high degree nodes to other PEs; vector must be replicated everywhere
+    int all_hdn_size = all_hdn.size();
+    MPI_Bcast( &all_hdn_size, 1, MPI_INT, ROOT, m_communicator );
+    all_hdn.resize( all_hdn_size );
+    MPI_Bcast( all_hdn.data(), all_hdn_size, MPI_UNSIGNED_LONG_LONG, ROOT, m_communicator );
+
     return all_hdn;
 }
+ 
