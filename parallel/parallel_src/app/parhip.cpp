@@ -96,7 +96,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 //parallel_graph_io::readGraphWeightedFlexible(G, graph_filename, rank, size, communicator);
                 if( rank == ROOT ){
                         std::cout <<  "took " <<  t.elapsed()  << std::endl;
-                        //std::cout <<  "n: " <<  in_G.number_of_global_nodes() << " m: " <<  in_G.number_of_global_edges()  << std::endl;
+                        std::cout <<  "n: " <<  in_G.number_of_global_nodes() << " m: " <<  in_G.number_of_global_edges()  << std::endl;
                 }
 		if( rank == ROOT ) std::cout<< __LINE__ << ", read graph " << std::endl;
 		getFreeRam(MPI_COMM_WORLD, myMem, true);
@@ -148,7 +148,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 
         parallel_graph_access G(communicator);
-        std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.8 );
+        std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.6 );
  
 	if(global_hdn.empty()) {
 		// TODO: find more elegant way to do it.
@@ -161,6 +161,8 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		if (rank==ROOT){
 			std::cout << " ============  Reducing graph  =========== " <<  std::endl;
             std::cout << "log> number of affected nodes " << global_hdn.size() << std::endl;
+            std::cout << "log> reduced graph number of edges " << G.number_of_global_edges() << std::endl;
+//std::cout << "log> ghost nodes, original graph " <<  << " reduced g " << G.number_of_global_edges() << std::endl;
         }
 	}
 
@@ -205,34 +207,18 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 distributed_partitioner::generate_random_choices( partition_config );
 
                 //G.printMemoryUsage(std::cout);
-		if( rank == ROOT ) std::cout<< __LINE__ << ", allocated data structs" << std::endl;
-		getFreeRam(MPI_COMM_WORLD, myMem, true);
-                //compute some stats
-                EdgeWeight interPEedges = 0;
-                EdgeWeight localEdges = 0;
-                NodeWeight localWeight = 0;
-                forall_local_nodes(G, node) {
-                        localWeight += G.getNodeWeight(node);
-                        forall_out_edges(G, e, node) {
-                                NodeID target = G.getEdgeTarget(e);
-                                if(!G.is_local_node(target)) {
-                                        interPEedges++;
-                                } else {
-                                        localEdges++;
-                                }
-                        } endfor
-                } endfor
+if( rank == ROOT ) std::cout<< __LINE__ << ", allocated data structs" << std::endl;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
 
-                EdgeWeight globalInterEdges = 0;
-                EdgeWeight globalIntraEdges = 0;
-                EdgeWeight globalWeight = 0;
-                MPI_Reduce(&interPEedges, &globalInterEdges, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, communicator);
-                MPI_Reduce(&localEdges, &globalIntraEdges, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, communicator);
-                MPI_Allreduce(&localWeight, &globalWeight, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, communicator);
+                //compute some stats
+                [[maybe_unused]] auto [red_globalInterEdges, red_globalIntraEdges, red_globalWeight ] = G.get_ghostEdges_nodeWeight();
+                auto [globalInterEdges, globalIntraEdges, globalWeight ] = in_G.get_ghostEdges_nodeWeight();
 
                 if( rank == ROOT ) {
-                        std::cout <<  "log> ghost edges/m " <<  globalInterEdges/(double)G.number_of_global_edges() << std::endl;
-                        std::cout <<  "log> local edges/m " <<  globalIntraEdges/(double)G.number_of_global_edges() << std::endl;
+                        std::cout <<  "log> ghost edges/m " <<  globalInterEdges/(double)in_G.number_of_global_edges() << std::endl;
+                        std::cout <<  "log> local edges/m " <<  globalIntraEdges/(double)in_G.number_of_global_edges() << std::endl;
+                        std::cout <<  "log> reduced G ghost edges/m " <<  red_globalInterEdges/(double)G.number_of_global_edges() << std::endl;
+                        std::cout <<  "log> reduced G local edges/m " <<  red_globalIntraEdges/(double)G.number_of_global_edges() << std::endl;
                 }
 
                 t.restart();

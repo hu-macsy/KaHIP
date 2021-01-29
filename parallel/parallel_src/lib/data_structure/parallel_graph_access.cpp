@@ -153,3 +153,29 @@ std::vector<NodeID> parallel_graph_access::get_high_degree_global_nodes(const No
     return all_hdn;
 }
  
+
+std::tuple<EdgeWeight,EdgeWeight,NodeWeight> parallel_graph_access::get_ghostEdges_nodeWeight(){
+    EdgeWeight interPEedges = 0;
+    EdgeWeight localEdges = 0;
+    NodeWeight localWeight = 0;
+    forall_local_nodes( (*this), node) {
+            localWeight += getNodeWeight(node);
+            forall_out_edges( (*this), e, node) {
+                    NodeID target = getEdgeTarget(e);
+                    if(!is_local_node(target)) {
+                            interPEedges++;
+                    } else {
+                            localEdges++;
+                    }
+            } endfor
+    } endfor
+
+    EdgeWeight globalInterEdges = 0;
+    EdgeWeight globalIntraEdges = 0;
+    NodeWeight globalWeight = 0;
+    MPI_Reduce(&interPEedges, &globalInterEdges, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, m_communicator);
+    MPI_Reduce(&localEdges, &globalIntraEdges, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, m_communicator);
+    MPI_Allreduce(&localWeight, &globalWeight, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, m_communicator);
+
+    return {globalInterEdges, globalIntraEdges, globalWeight };
+}

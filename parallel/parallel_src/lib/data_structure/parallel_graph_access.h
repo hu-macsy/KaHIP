@@ -666,6 +666,10 @@ public:
         /** Return all global node IDs with degree > minDegree for the local nodes.
         */
         std::vector<NodeID> get_high_degree_global_nodes(const NodeID minDegree) ;
+
+        /** Returns 3 values: number of global edges between PEs, inside PEs and the global node weight sum.
+        */
+        std::tuple<EdgeWeight,EdgeWeight,NodeWeight> get_ghostEdges_nodeWeight();
   
         /* ============================================================= */
         /* methods handling balance */
@@ -703,8 +707,8 @@ public:
 
         EdgeID get_first_edge(NodeID node);
         EdgeID get_first_invalid_edge(NodeID node);
-	std::vector<NodeID> get_target_list(NodeID node);
-	std::vector<EdgeWeight> get_target_weight_list(NodeID node);
+        std::vector<NodeID> get_target_list(NodeID node);
+        std::vector<EdgeWeight> get_target_weight_list(NodeID node);
 
         NodeID getNodeLabel(NodeID node); 
         void setNodeLabel(NodeID node, NodeID label); 
