@@ -108,7 +108,7 @@ std::vector<NodeID> parallel_graph_access::get_high_degree_local_nodes(const Nod
     std::vector<NodeID> local_high_degree_nodes;
 
     forall_local_nodes((*this), node) {
-        const double node_degree = getNodeDegree(node); //TODO: change to ghost_degree?
+        const double node_degree = getNodeDegree(node);
         //if this node has a higher degree than we allow
         if (node_degree>minDegree){
             assert( is_local_node(node) );
@@ -125,7 +125,7 @@ std::vector<NodeID> parallel_graph_access::get_high_ghost_degree_local_nodes(con
     assert( ghostDeg.size() == number_of_local_nodes() );
 
     forall_local_nodes((*this), node) {
-        const double node_degree = ghostDeg[node]; //TODO: change to ghost_degree?
+        const double node_degree = ghostDeg[node]; 
         //if this node has a higher degree than we allow
         if (node_degree>minDegree){
             assert( is_local_node(node) );
@@ -155,7 +155,7 @@ std::vector<NodeID> parallel_graph_access::get_high_degree_global_nodes(const No
     //calculate prefix sum, aka displacement
     std::vector<int> displ( size, 0 );              //we do not need the last element
     for( unsigned int i=1; i<size; i++){
-        displ[i] = displ[i-1]+ hdn_root[i-1] ;   //TODO/CHECK: is the +1 needed?
+        displ[i] = displ[i-1]+ hdn_root[i-1] ;   
     }
 
     std::vector<NodeID> all_hdn;

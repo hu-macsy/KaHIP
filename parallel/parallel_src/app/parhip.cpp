@@ -112,6 +112,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         }
                 }
 
+                // copy or reduce graph. This is meant to reduce the memory consumption for certain complex graphs
                 {
                     const NodeID global_max_degree = in_G.get_global_max_degree(communicator);
                     parallel_graph_access G(communicator);
