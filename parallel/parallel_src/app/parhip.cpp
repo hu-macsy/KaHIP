@@ -158,8 +158,10 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 				  << std::endl;
 	} else {
 		parallel_graph_access::get_reduced_graph(in_G, G, global_hdn, communicator);
-		if (rank==ROOT)
+		if (rank==ROOT){
 			std::cout << " ============  Reducing graph  =========== " <<  std::endl;
+            std::cout << "log> number of affected nodes " << global_hdn.size() << std::endl;
+        }
 	}
 
                 assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
@@ -270,13 +272,6 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 if( rank == ROOT ) std::cout<< __LINE__ << ", finished partitioning " << std::endl;
 getFreeRam(MPI_COMM_WORLD, myMem, true);
  
-                 {
-                        distributed_quality_metrics qm2;
-                        EdgeWeight edge_cut2 = qm2.edge_cut( in_G, communicator );
-if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut2  << std::endl; //in_G has more edges, thus a higher cut
-                }
-
-
                 // Important: we do not add edges to the graph (anyway m_building_graph must be true to add_edge())
                 // We simple copy the calculated partition to the original graph and continue with that.
                 // ADDING PARTITION TO THE ORIGINAL GRAPH
