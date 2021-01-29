@@ -529,14 +529,14 @@ public:
 		} endfor
 			  
 	 
-	      
+	      /*
 	       for (int i = 0; i < local_edge_lists.size(); i++) {
 		       std::cout << "R:" << rank << " node-local_edge_list: " << i << " ";
 		       for (int j = 0; j < local_edge_lists[i].size(); j++)
 			       std::cout <<  local_edge_lists[i][j] << "  ";
 		       std::cout << std::endl;
 	       }
-
+        */
 
 
 	  
