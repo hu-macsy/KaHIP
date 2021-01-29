@@ -610,7 +610,7 @@ public:
         
         /** Return all global node IDs with degree > minDegree for the local nodes.
         */
-        std::vector<NodeID> get_high_degree_global_nodes(const NodeID minDegree, const bool useGhostDegree=true) ;
+        std::vector<NodeID> get_high_degree_global_nodes(const NodeID minDegree, const bool useGhostDegree=false) ;
 
         /** Returns 3 values: number of global edges between PEs, inside PEs and the global node weight sum.
         */

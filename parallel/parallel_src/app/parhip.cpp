@@ -117,7 +117,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                     const NodeID global_max_degree = in_G.get_global_max_degree(communicator);
                     parallel_graph_access G(communicator);
                     std::vector<NodeID> global_hdn;
-                    global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.8 );
+                    global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.8 , false);
 
                 	// if (rank == ROOT) {
                 	// 	std::cout << " Rank  = " << rank
