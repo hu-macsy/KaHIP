@@ -262,10 +262,12 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 // We simple copy the calculated partition to the original graph and continue with that.
                 // ADDING PARTITION TO THE ORIGINAL GRAPH
                 forall_local_nodes(G, node) {
-                        const NodeID block = G.getNodeLabel(node);
-                        const NodeID secondPartInd = G.getSecondPartitionIndex(node);
-                        in_G.setNodeLabel(node, block);
-                        in_G.setSecondPartitionIndex(node, secondPartInd);
+                        in_G.setNodeLabel(node, G.getNodeLabel(node));
+                        in_G.setSecondPartitionIndex(node, G.getSecondPartitionIndex(node));
+                } endfor
+                forall_ghost_nodes(G, node) {
+                        in_G.setNodeLabel(node, G.getNodeLabel(node));
+                        in_G.setSecondPartitionIndex(node, G.getSecondPartitionIndex(node));
                 } endfor
 
                 //make sure data distribution has not changed
@@ -290,8 +292,8 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
                 {
                         distributed_quality_metrics qm2;
-                        EdgeWeight edge_cut2 = qm.edge_cut( in_G, communicator );
-                        EdgeWeight balance2  = qm.balance( partition_config, in_G, communicator );
+                        EdgeWeight edge_cut2 = qm2.edge_cut( in_G, communicator );
+                        EdgeWeight balance2  = qm2.balance( partition_config, in_G, communicator );
 if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut << " < " << edge_cut2 << std::endl; //in_G has more edges, thus a higher cut
 if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance2 << std::endl;
                 }
