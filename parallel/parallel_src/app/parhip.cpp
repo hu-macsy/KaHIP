@@ -114,51 +114,19 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 		const NodeID global_max_degree = in_G.get_global_max_degree(communicator);
 
-		/******************* ignore *************************/
-		// std::vector<NodeID> global_nodes;
-		// //  NodeID degree_bound = (NodeID) (local_max_degree*0.9);
-		// //  global_nodes.push_back(3);
-		// //  global_nodes.push_back(8);
-		// //  global_nodes.push_back(6);
-		// //  if (rank == ROOT) {
-		// // 	 std::cout  <<" [";
-		// // 	 for (auto i = global_nodes.begin(); i != global_nodes.end(); ++i)
-		// // 		 std::cout << *i << ' ';
-		// // 	 std::cout  <<" ]"<< std::endl;
-		// //  }
-		// std::vector<std::vector<NodeID>> edges;
-	        // std::vector<NodeID> local_nodes;
-
-		// in_G.get_localID_high_degree_nodes(global_nodes,local_nodes);
-		// in_G.get_edges_high_degree_nodes(local_nodes, edges);
-		
-
-		// std::cout << " Rank  = " << rank
-		// 	  << " local nodes [ "  << std::endl;
-		// for (auto i = local_nodes.begin(); i != local_nodes.end(); ++i)
-		// 	std::cout << *i << ' ';
-		// std::cout  <<" ]"<< std::endl;
-		// std::cout << " edges [ "  << std::endl;
-		// for ( const std::vector<NodeID> &v : edges )
-		// 	{
-		// 		for ( int x : v ) std::cout << x << ' ';
-		// 		std::cout << std::endl;
-		// 	}
-		/******************* ignore *************************/
-
 
         parallel_graph_access G(communicator);
         std::vector<NodeID> global_hdn;
-	//global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.8 );
+	global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.8 );
 
-	if (rank == ROOT) {
-		std::cout << " Rank  = " << rank
-			  << " global_hdn [ "  << std::endl;
-		for (auto i = global_hdn.begin(); i != global_hdn.end(); ++i)
-			std::cout << *i << ' ';
-		std::cout  <<" ]"<< std::endl;
+	// if (rank == ROOT) {
+	// 	std::cout << " Rank  = " << rank
+	// 		  << " global_hdn [ "  << std::endl;
+	// 	for (auto i = global_hdn.begin(); i != global_hdn.end(); ++i)
+	// 		std::cout << *i << ' ';
+	// 	std::cout  <<" ]"<< std::endl;
 		
-	}
+	// }
  
 	if(global_hdn.empty()) {
 		// TODO: find more elegant way to do it.
@@ -179,15 +147,6 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
                 assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
                 assert( G.number_of_local_edges() <= in_G.number_of_local_edges() );    //edges are less or equal
-
-		forall_local_nodes(G, node) {
-		  forall_out_edges(G, e, node) {
-		    NodeID v = G.getEdgeTarget(e);
-		    EdgeWeight w = G.getEdgeWeight(e);
-		    cout << "G. R " << rank << " :("<< node << ", " << v << " ) w = " << w << std::endl;
-		} endfor
-		    } endfor
-
 
 
 		
@@ -311,14 +270,6 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 PRINT(double balance_load  = qm.balance_load( partition_config, G, communicator );)
                 PRINT(double balance_load_dist  = qm.balance_load_dist( partition_config, G, communicator );)
 
-
-		forall_local_nodes(in_G, node) {
-		  forall_out_edges(in_G, e, node) {
-		    NodeID v = in_G.getEdgeTarget(e);
-		    EdgeWeight w = in_G.getEdgeWeight(e);
-		    cout << "in_G. R " << rank << " :("<< node << ", " << v << " ) w = " << w << std::endl;
-		} endfor
-		    }endfor
 
 		  
                 {
