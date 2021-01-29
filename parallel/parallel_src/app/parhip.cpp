@@ -112,7 +112,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         }
                 }
 
-        const NodeID global_max_degree = in_G.get_global_max_degree(communicator);
+		const NodeID global_max_degree = in_G.get_global_max_degree(communicator);
 
 		/******************* ignore *************************/
 		// std::vector<NodeID> global_nodes;
@@ -148,14 +148,25 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 
         parallel_graph_access G(communicator);
-        std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.8 );
+        std::vector<NodeID> global_hdn;
+	//global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.8 );
+
+	if (rank == ROOT) {
+		std::cout << " Rank  = " << rank
+			  << " global_hdn [ "  << std::endl;
+		for (auto i = global_hdn.begin(); i != global_hdn.end(); ++i)
+			std::cout << *i << ' ';
+		std::cout  <<" ]"<< std::endl;
+		
+	}
  
 	if(global_hdn.empty()) {
 		// TODO: find more elegant way to do it.
 		parallel_graph_access::get_graph_copy(in_G, G, communicator);
-		if (rank == ROOT)
-			std::cout << "WARNING : Empty list of high degree nodes! Copying graph instead."
-				  << std::endl;
+		if (rank == ROOT) {
+		  std::cout << "WARNING : Empty list of high degree nodes! " << std::endl;
+		  std::cout << " ===========  Copying graph   =========== " << std::endl;
+		}
 	} else {
 		parallel_graph_access::get_reduced_graph(in_G, G, global_hdn, communicator);
 		if (rank==ROOT)
@@ -165,6 +176,17 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
                 assert( G.number_of_local_edges() <= in_G.number_of_local_edges() );    //edges are less or equal
 
+		forall_local_nodes(G, node) {
+		  forall_out_edges(G, e, node) {
+		    NodeID v = G.getEdgeTarget(e);
+		    EdgeWeight w = G.getEdgeWeight(e);
+		    cout << "G. R " << rank << " :("<< node << ", " << v << " ) w = " << w << std::endl;
+		} endfor
+		    } endfor
+
+
+
+		
                 if( partition_config.refinement_focus ){
                         //in this version, the coarsening factor depends on the input size. As cluster_coarsening_factor sets a limit to the size
                         //of the clusters when coarsening, it should be more than 2, thus, coarsening_factor should be greater than 2
@@ -304,13 +326,28 @@ if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut2  << std::endl; //in
                 PRINT(double balance_load_dist  = qm.balance_load_dist( partition_config, G, communicator );)
 
 
+		forall_local_nodes(in_G, node) {
+		  forall_out_edges(in_G, e, node) {
+		    NodeID v = in_G.getEdgeTarget(e);
+		    EdgeWeight w = in_G.getEdgeWeight(e);
+		    cout << "in_G. R " << rank << " :("<< node << ", " << v << " ) w = " << w << std::endl;
+		} endfor
+		    }endfor
+
+		  
                 {
-                        distributed_quality_metrics qm2;
+
+		        distributed_quality_metrics qm2;
                         EdgeWeight edge_cut2 = qm.edge_cut( in_G, communicator );
                         EdgeWeight balance2  = qm.balance( partition_config, in_G, communicator );
 if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut << " < " << edge_cut2 << std::endl; //in_G has more edges, thus a higher cut
 if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance2 << std::endl;
-                }
+
+
+		}
+
+
+		
 
                 if( rank == ROOT ) {
 
@@ -372,6 +409,7 @@ if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance2
                         }
                         parallel_vector_io pvio;
                         pvio.writePartitionSimpleParallel(G, filename);
+			pvio.writePartitionSimpleParallel(in_G, "inG_partition_file");
                 }
 
                 if( partition_config.save_partition_binary ) {
