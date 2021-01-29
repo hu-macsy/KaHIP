@@ -96,7 +96,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 //parallel_graph_io::readGraphWeightedFlexible(G, graph_filename, rank, size, communicator);
                 if( rank == ROOT ){
                         std::cout <<  "took " <<  t.elapsed()  << std::endl;
-                        //std::cout <<  "n: " <<  in_G.number_of_global_nodes() << " m: " <<  in_G.number_of_global_edges()  << std::endl;
+                        std::cout <<  "n: " <<  in_G.number_of_global_nodes() << " m: " <<  in_G.number_of_global_edges()  << std::endl;
                 }
 		if( rank == ROOT ) std::cout<< __LINE__ << ", read graph " << std::endl;
 		getFreeRam(MPI_COMM_WORLD, myMem, true);
@@ -169,8 +169,12 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		}
 	} else {
 		parallel_graph_access::get_reduced_graph(in_G, G, global_hdn, communicator);
-		if (rank==ROOT)
+		if (rank==ROOT){
 			std::cout << " ============  Reducing graph  =========== " <<  std::endl;
+            std::cout << "log> number of affected nodes " << global_hdn.size() << std::endl;
+            std::cout << "log> reduced graph number of edges " << G.number_of_global_edges() << std::endl;
+//std::cout << "log> ghost nodes, original graph " <<  << " reduced g " << G.number_of_global_edges() << std::endl;
+        }
 	}
 
                 assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
@@ -225,34 +229,18 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 distributed_partitioner::generate_random_choices( partition_config );
 
                 //G.printMemoryUsage(std::cout);
-		if( rank == ROOT ) std::cout<< __LINE__ << ", allocated data structs" << std::endl;
-		getFreeRam(MPI_COMM_WORLD, myMem, true);
-                //compute some stats
-                EdgeWeight interPEedges = 0;
-                EdgeWeight localEdges = 0;
-                NodeWeight localWeight = 0;
-                forall_local_nodes(G, node) {
-                        localWeight += G.getNodeWeight(node);
-                        forall_out_edges(G, e, node) {
-                                NodeID target = G.getEdgeTarget(e);
-                                if(!G.is_local_node(target)) {
-                                        interPEedges++;
-                                } else {
-                                        localEdges++;
-                                }
-                        } endfor
-                } endfor
+if( rank == ROOT ) std::cout<< __LINE__ << ", allocated data structs" << std::endl;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
 
-                EdgeWeight globalInterEdges = 0;
-                EdgeWeight globalIntraEdges = 0;
-                EdgeWeight globalWeight = 0;
-                MPI_Reduce(&interPEedges, &globalInterEdges, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, communicator);
-                MPI_Reduce(&localEdges, &globalIntraEdges, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, communicator);
-                MPI_Allreduce(&localWeight, &globalWeight, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, communicator);
+                //compute some stats
+                [[maybe_unused]] auto [red_globalInterEdges, red_globalIntraEdges, red_globalWeight ] = G.get_ghostEdges_nodeWeight();
+                auto [globalInterEdges, globalIntraEdges, globalWeight ] = in_G.get_ghostEdges_nodeWeight();
 
                 if( rank == ROOT ) {
-                        std::cout <<  "log> ghost edges/m " <<  globalInterEdges/(double)G.number_of_global_edges() << std::endl;
-                        std::cout <<  "log> local edges/m " <<  globalIntraEdges/(double)G.number_of_global_edges() << std::endl;
+                        std::cout <<  "log> ghost edges/m " <<  globalInterEdges/(double)in_G.number_of_global_edges() << std::endl;
+                        std::cout <<  "log> local edges/m " <<  globalIntraEdges/(double)in_G.number_of_global_edges() << std::endl;
+                        std::cout <<  "log> reduced G ghost edges/m " <<  red_globalInterEdges/(double)G.number_of_global_edges() << std::endl;
+                        std::cout <<  "log> reduced G local edges/m " <<  red_globalIntraEdges/(double)G.number_of_global_edges() << std::endl;
                 }
 
                 t.restart();
@@ -292,23 +280,21 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 if( rank == ROOT ) std::cout<< __LINE__ << ", finished partitioning " << std::endl;
 getFreeRam(MPI_COMM_WORLD, myMem, true);
  
-                 {
-                        distributed_quality_metrics qm2;
-                        EdgeWeight edge_cut2 = qm2.edge_cut( in_G, communicator );
-if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut2  << std::endl; //in_G has more edges, thus a higher cut
-                }
-
-
                 // Important: we do not add edges to the graph (anyway m_building_graph must be true to add_edge())
                 // We simple copy the calculated partition to the original graph and continue with that.
                 // ADDING PARTITION TO THE ORIGINAL GRAPH
                 forall_local_nodes(G, node) {
-                        const NodeID block = G.getNodeLabel(node);
-                        const NodeID secondPartInd = G.getSecondPartitionIndex(node);
-                        in_G.setNodeLabel(node, block);
-                        in_G.setSecondPartitionIndex(node, secondPartInd);
+                        in_G.setNodeLabel(node, G.getNodeLabel(node));
+                        in_G.setSecondPartitionIndex(node, G.getSecondPartitionIndex(node));
+                } endfor
+                forall_ghost_nodes(G, node) {
+                        in_G.setNodeLabel(node, G.getNodeLabel(node));
+                        in_G.setSecondPartitionIndex(node, G.getSecondPartitionIndex(node));
                 } endfor
 
+                //make sure data distribution has not changed
+                assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
+                assert( G.number_of_local_edges() <= in_G.number_of_local_edges() );    //edges are less or equal
 		// PERFORM ADDITIONAL REF ROUND
 		// TODO:  SET THE PARTITION_CONFIG AS IT SHOULD BE!
 		// parallel_label_compress< std::vector< NodeWeight> > plc_refinement;
@@ -336,10 +322,9 @@ if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut2  << std::endl; //in
 
 		  
                 {
-
-		        distributed_quality_metrics qm2;
-                        EdgeWeight edge_cut2 = qm.edge_cut( in_G, communicator );
-                        EdgeWeight balance2  = qm.balance( partition_config, in_G, communicator );
+                        distributed_quality_metrics qm2;
+                        EdgeWeight edge_cut2 = qm2.edge_cut( in_G, communicator );
+                        EdgeWeight balance2  = qm2.balance( partition_config, in_G, communicator );
 if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut << " < " << edge_cut2 << std::endl; //in_G has more edges, thus a higher cut
 if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance2 << std::endl;
 
