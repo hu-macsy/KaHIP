@@ -666,8 +666,12 @@ public:
 		return 0; 
 	}
 
+        /** Return all local node IDs with degree > minDegree for the local nodes.
+        */
         std::vector<NodeID> get_high_degree_local_nodes(const NodeID minDegree) ;
-
+        
+        /** Return all global node IDs with degree > minDegree for the local nodes.
+        */
         std::vector<NodeID> get_high_degree_global_nodes(const NodeID minDegree) ;
   
         /* ============================================================= */

@@ -104,8 +104,6 @@ void parallel_graph_access::set_comm_rounds_up(ULONG comm_rounds) {
         m_comm_rounds_up = comm_rounds;
 }
 
-/** Return all local node IDs with degree > minDegree for the local nodes.
-*/
 std::vector<NodeID> parallel_graph_access::get_high_degree_local_nodes(const NodeID minDegree) {
     std::vector<NodeID> local_high_degree_nodes;
 
@@ -121,8 +119,6 @@ std::vector<NodeID> parallel_graph_access::get_high_degree_local_nodes(const Nod
     return local_high_degree_nodes;
 }
 
-/** Return all global node IDs with degree > minDegree for the local nodes.
-*/
 std::vector<NodeID> parallel_graph_access::get_high_degree_global_nodes(const NodeID minDegree) {
     
     std::vector<NodeID> local_high_degree_nodes = get_high_degree_local_nodes(minDegree);
