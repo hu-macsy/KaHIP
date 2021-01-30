@@ -368,6 +368,56 @@ public:
         NodeID get_local_max_degree() {
                 return m_local_max_node_degree;
         }
+
+bool parallel_graph_access::print_graph_degrees() {
+
+  forall_local_nodes((*this), node) {
+		  //forall_out_edges(in_G, e, node) {
+			 //NodeID v = in_G.getEdgeTarget(e);
+		//EdgeWeight w = in_G.getEdgeWeight(e);
+		//std::cout << "in_ Rank = " << rank << " (" << node << "," << v << ") w = " << w << std::endl;
+		  //   } endfor
+        std::cout << "R:" << rank << " u = " << node << "u_label = " << (*this).getNodeLabel(node)
+		  <<  " u_degree = " << (*this).getNodeDegree(node) << std::endl;
+    
+	       } endfor
+
+
+      return true;
+}
+
+  
+
+
+bool parallel_graph_access::print_graph() {
+  forall_local_nodes((*this), node) {
+    std::cout << "R:" << rank << " node = " << node << " label = " << (*this).getNodeLabel(node)
+	      << " weight = " << (*this).getNodeWeight(node) <<  " degree = "
+	      << (*this).getNodeDegree(node)  << " sp_index = "
+	      << (*this).getSecondPartitionIndex(node) <<  std::endl;
+    // std::cout << "R:" << rank << " in block of size = "
+    // 	      << (*this).getBlockSize((*this).getNodeLabel(node)) <<std::endl;
+
+  } endfor
+
+      return true;
+}
+
+
+bool parallel_graph_access::print_part_graph() {
+  forall_local_nodes((*this), node) {
+    std::cout << "R:" << rank << " node = " << node << " label = " << (*this).getNodeLabel(node)
+	      << " weight = " << (*this).getNodeWeight(node) <<  " degree = "
+	      << (*this).getNodeDegree(node)  << " sp_index = "
+	      << (*this).getSecondPartitionIndex(node) << " block_size = "
+	      << (*this).getBlockSize((*this).getNodeLabel(node)) << std::endl;
+  } endfor
+
+      return true;
+}
+
+  
+  
         //TODO: communicator not really needed, just to indicate that this operation requires global communication. remove?
         NodeID get_global_max_degree( MPI_Comm communicator ) {
                 assert( !m_building_graph );
@@ -621,7 +671,7 @@ public:
         /* ============================================================= */
         void init_balance_management( PPartitionConfig & config );
         void update_block_weights();
-
+        void update_from_graph( parallel_graph_access &G );
         // if a ghost node changes its block we update the fuzzy block weight
         void update_non_contained_block_balance( PartitionID from, PartitionID to, NodeWeight node_weight);
 

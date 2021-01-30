@@ -20,7 +20,7 @@ public:
         virtual NodeWeight getBlockSize( PartitionID block );
         virtual void setBlockSize( PartitionID block, NodeWeight block_size ) ;
         virtual void update_non_contained_block_balance( PartitionID from, PartitionID to, NodeWeight node_weight) {/*noop*/};
-
+        virtual void update_from_graph( parallel_graph_access &G);
         virtual void init();
         virtual void update();
 

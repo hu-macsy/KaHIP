@@ -34,6 +34,19 @@ void balance_management_refinement::init() {
         update();
 }
 
+// update local and total block sizes based on an input partitioned graph
+void balance_management_refinement::update_from_graph( parallel_graph_access &G) {
+
+  for( long block = 0; block < m_total_num_labels; block++) {
+
+    //std::cout << "init> block " << block << " size = " << m_G->getBlockSize(block) << std::endl;
+    m_G->setBlockSize(block, G.getBlockSize(block));
+    //std::cout << "update> block " << block << " size = " << m_G->getBlockSize(block) << std::endl;
+    //m_local_block_weights[block] = G.getBlockSize(block);
+  }
+  //update();
+}
+
 void balance_management_refinement::update() {
         MPI_Allreduce(&m_local_block_weights[0], &m_total_block_weights[0], 
                        m_total_num_labels, MPI_UNSIGNED_LONG_LONG, MPI_SUM, m_G->getCommunicator());

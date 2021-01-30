@@ -77,6 +77,11 @@ void parallel_graph_access::init_balance_management( PPartitionConfig & config )
         }
 }
 
+void parallel_graph_access::update_from_graph(parallel_graph_access &G) {
+  m_bm->update_from_graph(G);
+}
+
+
 void parallel_graph_access::update_non_contained_block_balance( PartitionID from, PartitionID to, NodeWeight node_weight) {
         m_bm->update_non_contained_block_balance( from, to, node_weight);
 }
