@@ -48,14 +48,11 @@ void balance_management_refinement::init() {
         update();
 }
 
-// update local and total block sizes based on an input partitioned graph
+// update block sizes based on an input partitioned graph
 void balance_management_refinement::update_from_graph( parallel_graph_access & H) {
-
-  for( long block = 0; block < m_total_num_labels; block++) {
-    //std::cout << "initial> block " << block << " size = " << (*this).getBlockSize(block) << std::endl;
-    (*this).setBlockSize(block, H.getBlockSize(block));
-    //std::cout << "update> block " << block << " size = " << (*this).getBlockSize(block) << std::endl;
-      }
+	for( long block = 0; block < m_total_num_labels; block++) {
+		(*this).setBlockSize(block, H.getBlockSize(block));
+	}
 }
 
 void balance_management_refinement::update() {

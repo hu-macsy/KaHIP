@@ -368,76 +368,32 @@ public:
         NodeID get_local_max_degree() {
                 return m_local_max_node_degree;
         }
-
-bool print_graph_degrees() {
-
-  forall_local_nodes((*this), node) {
-		  //forall_out_edges(in_G, e, node) {
-			 //NodeID v = in_G.getEdgeTarget(e);
-		//EdgeWeight w = in_G.getEdgeWeight(e);
-		//std::cout << "in_ Rank = " << rank << " (" << node << "," << v << ") w = " << w << std::endl;
-		  //   } endfor
-        std::cout << "R:" << rank << " u = " << node << "u_label = " << (*this).getNodeLabel(node)
-		  <<  " u_degree = " << (*this).getNodeDegree(node) << std::endl;
-    
-	       } endfor
-
-
-      return true;
-}
-
   
+	/* printing functions for fast debugging */
+	bool print_graph_local() {
+		forall_local_nodes((*this), node) {
+			std::cout << "R:" << rank << " node = " << node << " label = "
+				  << (*this).getNodeLabel(node)
+				  << " weight = " << (*this).getNodeWeight(node) <<  " degree = "
+				  << (*this).getNodeDegree(node)   << " sp_index = "
+				  << (*this).getSecondPartitionIndex(node) << " block_size = "
+				  << (*this).getBlockSize((*this).getNodeLabel(node)) <<std::endl;
+		} endfor      
+			  return true;
+	}
+	
 
-bool print_graph_local() {
-  forall_local_nodes((*this), node) {
-    std::cout << "R:" << rank << " node = " << node << " label = " << (*this).getNodeLabel(node)
-	      << " weight = " << (*this).getNodeWeight(node) <<  " degree = "
-	      << (*this).getNodeDegree(node)   << " sp_index = "
-	      << (*this).getSecondPartitionIndex(node) << " block_size = "
-	      << (*this).getBlockSize((*this).getNodeLabel(node)) <<std::endl;
-  } endfor      
-      return true;
-}
-
-
-  
-
-bool print_graph_ghost() {
-  forall_ghost_nodes((*this), node) {
-    std::cout << "R:" << rank << " ghost node = " << node << " label = "
-	      << (*this).getNodeLabel(node)
-	      << " weight = " << (*this).getNodeWeight(node) << " sp_index = "
-	      << (*this).getSecondPartitionIndex(node) <<  " block_size = "
-     	      << (*this).getBlockSize((*this).getNodeLabel(node)) <<std::endl;
-
-  } endfor
-  return true;
-}
-
-
-// bool print_part_graph() {
-//   forall_local_nodes((*this), node) {
-//     std::cout << "R:" << rank << " node = " << node << " label = " << (*this).getNodeLabel(node)
-// 	      << " weight = " << (*this).getNodeWeight(node) <<  " degree = "
-// 	      << (*this).getNodeDegree(node)  << " sp_index = "
-// 	      << (*this).getSecondPartitionIndex(node) << " block_size = "
-// 	      << (*this).getBlockSize((*this).getNodeLabel(node))
-//               << " ( " << (*this).getBlockSize(node) << " )"
-// 	      << std::endl;
-//   } endfor
-//   forall_ghost_nodes((*this), node) {
-//     std::cout << "R:" << rank << " ghost node = " << node << " label = " << (*this).getNodeLabel(node)
-//   	      << " weight = " << (*this).getNodeWeight(node) <<  " degree = "
-//   	      << (*this).getNodeDegree(node)  << " sp_index = "
-//   	      << (*this).getSecondPartitionIndex(node) << " block_size = "
-//    	      << (*this).getBlockSize((*this).getNodeLabel(node)) 
-// 	      << " ( " << (*this).getBlockSize(node) << " )"
-// 	      << std::endl;
-//       } endfor
-
-//       return true;
-// }
-
+	bool print_graph_ghost() {
+		forall_ghost_nodes((*this), node) {
+			std::cout << "R:" << rank << " ghost node = " << node << " label = "
+				  << (*this).getNodeLabel(node)
+				  << " weight = " << (*this).getNodeWeight(node) << " sp_index = "
+				  << (*this).getSecondPartitionIndex(node) <<  " block_size = "
+				  << (*this).getBlockSize((*this).getNodeLabel(node)) <<std::endl;
+			
+		} endfor
+			  return true;
+	}
   
   
         //TODO: communicator not really needed, just to indicate that this operation requires global communication. remove?
@@ -766,10 +722,6 @@ bool print_graph_ghost() {
         //methods for non-local / ghost nodes only
         //these methods are usually called to communicate data
         PEID getTargetPE(NodeID node);
-
-        std::unordered_map<NodeID, NodeID> getGlobalToLocal() {
-	  return  m_global_to_local_id;
-	};
 
         //input is a global id 
         //output is the local id

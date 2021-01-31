@@ -112,21 +112,6 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         }
                 }
 
-		// in_G.print_graph();
-		// std::unordered_map<NodeID, NodeID> global_to_local_id = in_G.getGlobalToLocal();
-		// assert(!global_to_local_id.empty());
-		// forall_local_nodes(in_G, node) {
-		//   NodeID label = in_G.getNodeLabel(node);
-		//   NodeID labelID = in_G.getLocalID(node);
-		//   NodeID globalID = in_G.getGlobalID(node);
-		//   NodeID local = global_to_local_id[node]; 
-		//   if (rank == 1)
-		//     std::cout << " node " << node << " label " << label << " labelID " << labelID << " globalID " << globalID << " local " << local << std::endl;
-		// } endfor
-
-
-
-
 		
                 // copy or reduce graph. This is meant to reduce the memory consumption for certain complex graphs
 
@@ -277,21 +262,13 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 		  
 		  forall_local_nodes(G, node) {		    
-		    in_G.setNodeLabel(node, G.getNodeLabel(node));
-		    in_G.setSecondPartitionIndex(node, G.getSecondPartitionIndex(node));
-		    // cannot do the following commands if I haved initiate a balance management
-		    //NodeID block =  in_G.getNodeLabel(node);
-		    //in_G.setBlockSize(block, G.getBlockSize(block));
-		   		    
+			  in_G.setNodeLabel(node, G.getNodeLabel(node));
+			  in_G.setSecondPartitionIndex(node, G.getSecondPartitionIndex(node));
 		  } endfor
 		  // init_balance_management should be called after setting
 		  // the labels of local nodes equal to the block labels
 		  // (as if already partitioned in k parts ).
 		  in_G.init_balance_management_from_graph( partition_config, G);
-
-		  if (rank == ROOT)
-		    std::cout << " print graph in_G ( local nodes )" << std::endl; 
-		  in_G.print_graph_local();
 
 		  forall_ghost_nodes(in_G, node) {
 		  	  //in_G.setSecondPartitionIndex(node, in_G.getNodeLabel(node));
@@ -305,32 +282,21 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 	                } endfor
 
+
+		  // if (rank == ROOT)
+		  // 	  std::cout << " print graph in_G " << std::endl; 
+		  // in_G.print_graph_local();
+		  // in_G.print_graph_ghost();
+
+		  // std::cout << " log> waiting on pointless bar... " << std::endl; 
+		  // MPI_Barrier(communicator);
+
+		  // if (rank == ROOT)
+		  //   std::cout << " print graph G " << std::endl; 
+		  // G.print_graph_local();
+		  // G.print_graph_ghost();
 		  
 
-		  assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
-
-		  assert( G.number_of_local_edges() <= in_G.number_of_local_edges() );    //edges are less or equal
-
-
-		  if (rank == ROOT)
-		    std::cout << " print graph in_G ( ghost nodes )" << std::endl; 
-		  in_G.print_graph_ghost();
-
-		  MPI_Barrier(communicator);
-		  
-		  //ADDING ONE MORE LABEL PROPAGATION STEP
-		  if (rank == ROOT)
-		    std::cout << " print graph G " << std::endl; 
-		  G.print_graph_local();
-		  G.print_graph_ghost();
-		  
-		  std::cout << " log> waiting on pointless bar... " << std::endl; 
-		  MPI_Barrier(communicator);
-
-		  if (rank == ROOT)
-		    std::cout << " print graph in_G ( after update)" << std::endl; 
-		  in_G.print_graph_local();
-		  in_G.print_graph_ghost();
 		  PPartitionConfig working_config = partition_config;
 		  working_config.vcycle = false; // assure that we actually can improve the cut
 		  parallel_label_compress< std::vector< NodeWeight> > plc_refinement;
@@ -338,7 +304,6 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 
 		 }
-
 
 		
                 //qm.evaluateMapping(G, PEtree, communicator);
@@ -351,14 +316,14 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 PRINT(double balance_load  = qm.balance_load( partition_config, G, communicator );)
                 PRINT(double balance_load_dist  = qm.balance_load_dist( partition_config, G, communicator );)
 
-//// temp: not working because of incorrect in_G
-// 		{
-//                         distributed_quality_metrics qm2;
-//                         EdgeWeight edge_cut2 = qm2.edge_cut( in_G, communicator );
-//                         EdgeWeight balance2  = qm2.balance( partition_config, in_G, communicator );
-// if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut << " < " << edge_cut2 << std::endl; //in_G has more edges, thus a higher cut
-// if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance2 << std::endl;
-//                 }
+
+		{
+                        distributed_quality_metrics qm2;
+                        EdgeWeight edge_cut2 = qm2.edge_cut( in_G, communicator );
+                        EdgeWeight balance2  = qm2.balance( partition_config, in_G, communicator );
+if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut << " < " << edge_cut2 << std::endl; //in_G has more edges, thus a higher cut
+if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance2 << std::endl;
+                }
 
 
                 if( rank == ROOT ) {

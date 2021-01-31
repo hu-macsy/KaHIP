@@ -15,6 +15,7 @@ class parallel_graph_access;
 class balance_management_refinement : public balance_management {
 public:
         balance_management_refinement( parallel_graph_access * G, NodeID num_labels);
+  /* add constructor that does not init balance management but copies it from input graph */  
         balance_management_refinement( parallel_graph_access * G, NodeID num_labels,
 				       parallel_graph_access & H);
         virtual ~balance_management_refinement();
@@ -22,6 +23,7 @@ public:
         virtual NodeWeight getBlockSize( PartitionID block );
         virtual void setBlockSize( PartitionID block, NodeWeight block_size ) ;
         virtual void update_non_contained_block_balance( PartitionID from, PartitionID to, NodeWeight node_weight) {/*noop*/};
+  // update block sizes based on an input partitioned graph
         virtual void update_from_graph( parallel_graph_access & G );
         virtual void init();
         virtual void update();
