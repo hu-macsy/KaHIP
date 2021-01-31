@@ -76,9 +76,15 @@ void parallel_graph_access::init_balance_management( PPartitionConfig & config )
                 m_bm = new balance_management_refinement( this, config.total_num_labels );
         }
 }
+/* init balance management based on an input partitioned graph */
+void parallel_graph_access::init_balance_management_from_graph( PPartitionConfig & config,
+								parallel_graph_access & G) {
+        if( m_bm != NULL ) {
+                delete m_bm;
+        }
 
-void parallel_graph_access::update_from_graph(parallel_graph_access &G) {
-  m_bm->update_from_graph(G);
+        assert( config.total_num_labels == config.k );
+	m_bm = new balance_management_refinement( this, config.total_num_labels, G );
 }
 
 

@@ -21,6 +21,20 @@ balance_management_refinement::balance_management_refinement(parallel_graph_acce
         init();
 }
 
+balance_management_refinement::balance_management_refinement(parallel_graph_access * G, PartitionID total_num_labels, parallel_graph_access & H )
+: balance_management( G, total_num_labels) {
+        m_total_block_weights.resize( total_num_labels );
+        m_local_block_weights.resize( total_num_labels );
+
+        for( long block = 0; block < (long) total_num_labels; block++) {
+                m_local_block_weights[block] = 0;
+                m_total_block_weights[block] = 0;
+        }
+        update_from_graph(H);
+}
+
+
+
 balance_management_refinement::~balance_management_refinement() {
                 
 }
@@ -35,16 +49,13 @@ void balance_management_refinement::init() {
 }
 
 // update local and total block sizes based on an input partitioned graph
-void balance_management_refinement::update_from_graph( parallel_graph_access &G) {
+void balance_management_refinement::update_from_graph( parallel_graph_access & H) {
 
   for( long block = 0; block < m_total_num_labels; block++) {
-
-    //std::cout << "init> block " << block << " size = " << m_G->getBlockSize(block) << std::endl;
-    m_G->setBlockSize(block, G.getBlockSize(block));
-    //std::cout << "update> block " << block << " size = " << m_G->getBlockSize(block) << std::endl;
-    //m_local_block_weights[block] = G.getBlockSize(block);
-  }
-  //update();
+    //std::cout << "initial> block " << block << " size = " << (*this).getBlockSize(block) << std::endl;
+    (*this).setBlockSize(block, H.getBlockSize(block));
+    //std::cout << "update> block " << block << " size = " << (*this).getBlockSize(block) << std::endl;
+      }
 }
 
 void balance_management_refinement::update() {

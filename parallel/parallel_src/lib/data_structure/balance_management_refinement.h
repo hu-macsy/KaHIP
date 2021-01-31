@@ -15,12 +15,14 @@ class parallel_graph_access;
 class balance_management_refinement : public balance_management {
 public:
         balance_management_refinement( parallel_graph_access * G, NodeID num_labels);
+        balance_management_refinement( parallel_graph_access * G, NodeID num_labels,
+				       parallel_graph_access & H);
         virtual ~balance_management_refinement();
 
         virtual NodeWeight getBlockSize( PartitionID block );
         virtual void setBlockSize( PartitionID block, NodeWeight block_size ) ;
         virtual void update_non_contained_block_balance( PartitionID from, PartitionID to, NodeWeight node_weight) {/*noop*/};
-        virtual void update_from_graph( parallel_graph_access &G);
+        virtual void update_from_graph( parallel_graph_access & G );
         virtual void init();
         virtual void update();
 

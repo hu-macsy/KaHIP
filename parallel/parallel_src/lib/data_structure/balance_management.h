@@ -26,6 +26,7 @@ public:
         virtual NodeWeight getBlockSize( PartitionID block ) = 0;
         virtual void setBlockSize( PartitionID block, NodeWeight block_size ) = 0;
         virtual void update_non_contained_block_balance( PartitionID from, PartitionID to, NodeWeight node_weight) = 0;
+        /* update balance management based on an input partitioned graph */
         virtual void update_from_graph( parallel_graph_access &G) = 0;
         // init local and total block sizes
         virtual void init() = 0;

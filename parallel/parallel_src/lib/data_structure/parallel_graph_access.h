@@ -369,7 +369,7 @@ public:
                 return m_local_max_node_degree;
         }
 
-bool parallel_graph_access::print_graph_degrees() {
+bool print_graph_degrees() {
 
   forall_local_nodes((*this), node) {
 		  //forall_out_edges(in_G, e, node) {
@@ -388,33 +388,55 @@ bool parallel_graph_access::print_graph_degrees() {
 
   
 
-
-bool parallel_graph_access::print_graph() {
+bool print_graph_local() {
   forall_local_nodes((*this), node) {
     std::cout << "R:" << rank << " node = " << node << " label = " << (*this).getNodeLabel(node)
 	      << " weight = " << (*this).getNodeWeight(node) <<  " degree = "
-	      << (*this).getNodeDegree(node)  << " sp_index = "
-	      << (*this).getSecondPartitionIndex(node) <<  std::endl;
-    // std::cout << "R:" << rank << " in block of size = "
-    // 	      << (*this).getBlockSize((*this).getNodeLabel(node)) <<std::endl;
-
-  } endfor
-
-      return true;
-}
-
-
-bool parallel_graph_access::print_part_graph() {
-  forall_local_nodes((*this), node) {
-    std::cout << "R:" << rank << " node = " << node << " label = " << (*this).getNodeLabel(node)
-	      << " weight = " << (*this).getNodeWeight(node) <<  " degree = "
-	      << (*this).getNodeDegree(node)  << " sp_index = "
+	      << (*this).getNodeDegree(node)   << " sp_index = "
 	      << (*this).getSecondPartitionIndex(node) << " block_size = "
-	      << (*this).getBlockSize((*this).getNodeLabel(node)) << std::endl;
-  } endfor
-
+	      << (*this).getBlockSize((*this).getNodeLabel(node)) <<std::endl;
+  } endfor      
       return true;
 }
+
+
+  
+
+bool print_graph_ghost() {
+  forall_ghost_nodes((*this), node) {
+    std::cout << "R:" << rank << " ghost node = " << node << " label = "
+	      << (*this).getNodeLabel(node)
+	      << " weight = " << (*this).getNodeWeight(node) << " sp_index = "
+	      << (*this).getSecondPartitionIndex(node) <<  " block_size = "
+     	      << (*this).getBlockSize((*this).getNodeLabel(node)) <<std::endl;
+
+  } endfor
+  return true;
+}
+
+
+// bool print_part_graph() {
+//   forall_local_nodes((*this), node) {
+//     std::cout << "R:" << rank << " node = " << node << " label = " << (*this).getNodeLabel(node)
+// 	      << " weight = " << (*this).getNodeWeight(node) <<  " degree = "
+// 	      << (*this).getNodeDegree(node)  << " sp_index = "
+// 	      << (*this).getSecondPartitionIndex(node) << " block_size = "
+// 	      << (*this).getBlockSize((*this).getNodeLabel(node))
+//               << " ( " << (*this).getBlockSize(node) << " )"
+// 	      << std::endl;
+//   } endfor
+//   forall_ghost_nodes((*this), node) {
+//     std::cout << "R:" << rank << " ghost node = " << node << " label = " << (*this).getNodeLabel(node)
+//   	      << " weight = " << (*this).getNodeWeight(node) <<  " degree = "
+//   	      << (*this).getNodeDegree(node)  << " sp_index = "
+//   	      << (*this).getSecondPartitionIndex(node) << " block_size = "
+//    	      << (*this).getBlockSize((*this).getNodeLabel(node)) 
+// 	      << " ( " << (*this).getBlockSize(node) << " )"
+// 	      << std::endl;
+//       } endfor
+
+//       return true;
+// }
 
   
   
@@ -660,7 +682,7 @@ bool parallel_graph_access::print_part_graph() {
         
         /** Return all global node IDs with degree > minDegree for the local nodes.
         */
-        std::vector<NodeID> get_high_degree_global_nodes(const NodeID minDegree, const bool useGhostDegree=true) ;
+        std::vector<NodeID> get_high_degree_global_nodes(const NodeID minDegree, const bool useGhostDegree=false) ;
 
         /** Returns 3 values: number of global edges between PEs, inside PEs and the global node weight sum.
         */
@@ -670,8 +692,10 @@ bool parallel_graph_access::print_part_graph() {
         /* methods handling balance */
         /* ============================================================= */
         void init_balance_management( PPartitionConfig & config );
+        /* init balance management based on an input partitioned graph */
+        void init_balance_management_from_graph( PPartitionConfig & config,
+						 parallel_graph_access & G );
         void update_block_weights();
-        void update_from_graph( parallel_graph_access &G );
         // if a ghost node changes its block we update the fuzzy block weight
         void update_non_contained_block_balance( PartitionID from, PartitionID to, NodeWeight node_weight);
 
@@ -742,6 +766,10 @@ bool parallel_graph_access::print_part_graph() {
         //methods for non-local / ghost nodes only
         //these methods are usually called to communicate data
         PEID getTargetPE(NodeID node);
+
+        std::unordered_map<NodeID, NodeID> getGlobalToLocal() {
+	  return  m_global_to_local_id;
+	};
 
         //input is a global id 
         //output is the local id
