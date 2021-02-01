@@ -121,8 +121,10 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
                     const NodeID global_max_degree = in_G.get_global_max_degree(communicator);
                     parallel_graph_access G(communicator);
-                    std::vector<NodeID> global_hdn;
-                    global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.5 , false);
+                    const double avg_degree = in_G.number_of_global_edges()/ (double) in_G.number_of_global_nodes();
+                    if( rank == ROOT ) std::cout<<"log> max degree " << global_max_degree << " average degree " << avg_degree << std::endl;
+                    //std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_degree( avg_degree*1.5 , false);
+                    std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( 0.1*in_G.number_of_global_nodes()/size, false);
 /*
                 	if (rank == ROOT) {
                 		std::cout << " Rank  = " << rank
@@ -323,6 +325,8 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 			PPartitionConfig working_config = partition_config;
 			working_config.vcycle = false; // assure that we actually can improve the cut
 			parallel_label_compress< std::vector< NodeWeight> > plc_refinement;
+
+
 			plc_refinement.perform_parallel_label_compression( working_config, in_G, false, false, PEtree); // balance, for_coarsening
 
 
@@ -340,7 +344,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 PRINT(double balance_load_dist  = qm.balance_load_dist( partition_config, G, communicator );)
 
 	        if (!global_hdn.empty()) {
-                        distributed_quality_metrics qm2;
+                        distributed_quality_metrics qm2; // = qm;
                         EdgeWeight edge_cut2 = qm2.edge_cut( in_G, communicator );
                         EdgeWeight balance2  = qm2.balance( partition_config, in_G, communicator );
 if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut << " < " << edge_cut2 << std::endl; //in_G has more edges, thus a higher cut

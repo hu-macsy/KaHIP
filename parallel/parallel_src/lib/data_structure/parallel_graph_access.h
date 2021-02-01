@@ -678,20 +678,36 @@ public:
 
         /** Return all local node IDs with degree > minDegree for the local nodes.
         */
-        std::vector<NodeID> get_high_degree_local_nodes(const NodeID minDegree) ;
+        std::vector<NodeID> get_high_degree_local_nodes_by_degree(const NodeID minDegree) ;
+
+        /** Returns local ID of the numNodes with the highest degree.
+        */
+        std::vector<NodeID> get_high_degree_local_nodes_by_num(const NodeID numNodes) ;
 
         /** Get the global IDs of local nodes with ghost degree higher then minDegree;
         */
-        std::vector<NodeID> get_high_ghost_degree_local_nodes(const NodeID minDegree);
+        std::vector<NodeID> get_high_ghost_degree_local_nodes_by_degree(const NodeID minDegree);
+
+        /** Returns local ID of the numNodes with the highest ghost degree.
+        */
+        std::vector<NodeID> get_high_ghost_degree_local_nodes_by_num( const NodeID numNodes);
         
         /** Return all global node IDs with degree > minDegree for the local nodes.
         */
-        std::vector<NodeID> get_high_degree_global_nodes(const NodeID minDegree, const bool useGhostDegree=false) ;
+        std::vector<NodeID> get_high_degree_global_nodes_by_degree(const NodeID minDegree, const bool useGhostDegree=false) ;
+
+        /** Return vector of size numNodes with global node IDs of all nodes with the highest degree<s
+        */
+        std::vector<NodeID> get_high_degree_global_nodes_by_num(const NodeID numNodes, const bool useGhostDegree=false ) ;
 
         /** Returns 3 values: number of global edges between PEs, inside PEs and the global node weight sum.
         */
         std::tuple<EdgeWeight,EdgeWeight,NodeWeight> get_ghostEdges_nodeWeight();
   
+        /** Given an arrays with global node IDs
+        */
+        std::vector<NodeID> get_all_global_nodes(const std::vector<NodeID> local_nodes );
+
         /* ============================================================= */
         /* methods handling balance */
         /* ============================================================= */

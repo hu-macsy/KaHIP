@@ -5,6 +5,9 @@
  * Christian Schulz <christian.schulz.phone@gmail.com>
  *****************************************************************************/
 
+#include <numeric>
+#include <algorithm>
+
 #include "balance_management_coarsening.h"
 #include "balance_management_refinement.h"
 #include "parallel_graph_access.h"
@@ -115,7 +118,7 @@ void parallel_graph_access::set_comm_rounds_up(ULONG comm_rounds) {
         m_comm_rounds_up = comm_rounds;
 }
 
-std::vector<NodeID> parallel_graph_access::get_high_degree_local_nodes(const NodeID minDegree) {
+std::vector<NodeID> parallel_graph_access::get_high_degree_local_nodes_by_degree(const NodeID minDegree) {
     std::vector<NodeID> local_high_degree_nodes;
 
     forall_local_nodes((*this), node) {
@@ -130,7 +133,33 @@ std::vector<NodeID> parallel_graph_access::get_high_degree_local_nodes(const Nod
     return local_high_degree_nodes;
 }
 
-std::vector<NodeID> parallel_graph_access::get_high_ghost_degree_local_nodes(const NodeID minDegree) {
+std::vector<NodeID> parallel_graph_access::get_high_degree_local_nodes_by_num(const NodeID numNodes) {
+    //store local degrees 
+    std::vector<NodeID> local_degrees( number_of_local_nodes() );
+    forall_local_nodes((*this), node) {
+        local_degrees[node] = getNodeDegree(node);
+    }endfor
+    
+    //store the global IDs of the local vertices
+    std::vector<NodeID> global_indices( number_of_local_nodes() );
+    forall_local_nodes((*this), node) {
+        global_indices[node] = getGlobalID(node);
+    }endfor
+    //if node IDs are consecutive, the for above is equivalent with
+    //std::iota( local_indices.begin(), local_indices.end(), get_from_range() );
+
+    //sort vertex IDs in increasing order based of their degree
+    std::sort( global_indices.begin(), global_indices.end(), 
+        [&local_degrees](NodeID i, NodeID j){
+            return local_degrees[i]>local_degrees[j]; 
+        }
+    );
+    //in case numNodes is greater than all the local nodes
+    NodeID size = std::min( numNodes, (NodeID) global_indices.size() );
+    return {global_indices.begin(), global_indices.begin()+size};
+}
+
+std::vector<NodeID> parallel_graph_access::get_high_ghost_degree_local_nodes_by_degree(const NodeID minDegree) {
     std::vector<NodeID> local_high_degree_nodes;
     std::vector<NodeID> ghostDeg = get_local_ghost_degrees();
     assert( ghostDeg.size() == number_of_local_nodes() );
@@ -147,17 +176,60 @@ std::vector<NodeID> parallel_graph_access::get_high_ghost_degree_local_nodes(con
     return local_high_degree_nodes;
 }
 
-std::vector<NodeID> parallel_graph_access::get_high_degree_global_nodes(const NodeID minDegree, const bool useGhostDegree ) {
+std::vector<NodeID> parallel_graph_access::get_high_ghost_degree_local_nodes_by_num( const NodeID numNodes) {
+    std::vector<NodeID> local_high_degree_nodes;
+    std::vector<NodeID> ghostDeg = get_local_ghost_degrees();
+    assert( ghostDeg.size() == number_of_local_nodes() );
+
+    //store the global IDs of the local vertices
+    std::vector<NodeID> global_indices( number_of_local_nodes() );
+    forall_local_nodes((*this), node) {
+        global_indices[node] = getGlobalID(node);
+    }endfor
+    //if node IDs are consecutive, the for above is equivalent with
+    //std::iota( local_indices.begin(), local_indices.end(), get_from_range() );
+
+    //sort vertex IDs in increasing order based of their ghost degree
+    std::sort( global_indices.begin(), global_indices.end(), 
+        [&ghostDeg](NodeID i, NodeID j){
+            return ghostDeg[i]>ghostDeg[j]; 
+        }
+    );
+
+    //in case numNodes is greater than all the local nodes
+    NodeID size = std::min( numNodes, (NodeID) global_indices.size() );
+    return {global_indices.begin(), global_indices.begin()+size};
+}
+
+std::vector<NodeID> parallel_graph_access::get_high_degree_global_nodes_by_degree(const NodeID minDegree, const bool useGhostDegree ) {
     
     std::vector<NodeID> local_high_degree_nodes;
     if( useGhostDegree ){
-        local_high_degree_nodes = get_high_ghost_degree_local_nodes(minDegree);
+        local_high_degree_nodes = get_high_ghost_degree_local_nodes_by_degree(minDegree);
     }else{
-        local_high_degree_nodes = get_high_degree_local_nodes(minDegree);
+        local_high_degree_nodes = get_high_degree_local_nodes_by_degree(minDegree);
     }
 
+    return get_all_global_nodes(local_high_degree_nodes);
+}
+
+std::vector<NodeID> parallel_graph_access::get_high_degree_global_nodes_by_num(const NodeID numNodes, const bool useGhostDegree ) {
+    
+    std::vector<NodeID> local_high_degree_nodes;
+    if( useGhostDegree ){
+        local_high_degree_nodes = get_high_ghost_degree_local_nodes_by_num(numNodes);
+    }else{
+        local_high_degree_nodes = get_high_degree_local_nodes_by_num(numNodes);
+    }
+
+    return get_all_global_nodes(local_high_degree_nodes);
+
+}
+
+std::vector<NodeID> parallel_graph_access::get_all_global_nodes(const std::vector<NodeID> local_nodes ) {
+
     //from the local high degree nodes we need to construct a replicated vector with all nodes
-    const int num_local_hdn = local_high_degree_nodes.size();
+    const int num_local_hdn = local_nodes.size();
 
     //gather the number of nodes in the root
     std::vector<int> hdn_root( size );
@@ -174,7 +246,7 @@ std::vector<NodeID> parallel_graph_access::get_high_degree_global_nodes(const No
         all_hdn.resize( displ.back()+hdn_root.back() );
     }
 
-    MPI_Gatherv( local_high_degree_nodes.data(), num_local_hdn, MPI_UNSIGNED_LONG_LONG, \
+    MPI_Gatherv( local_nodes.data(), num_local_hdn, MPI_UNSIGNED_LONG_LONG, \
         all_hdn.data(), hdn_root.data(), displ.data(), MPI_UNSIGNED_LONG_LONG, ROOT, m_communicator );
 
     //send all high degree nodes to other PEs; vector must be replicated everywhere
