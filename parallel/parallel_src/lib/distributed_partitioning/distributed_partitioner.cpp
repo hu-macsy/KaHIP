@@ -69,16 +69,18 @@ distributed_quality_metrics distributed_partitioner::perform_partitioning( MPI_C
                         if( rank == ROOT ) {
                                 PRINT( std::cout << "\n\t\tStarting vcycle " << m_cycle+1 <<" out of " << partition_config.num_vcycles <<"\n\n");
                         }
-
+			
                 #endif
+			PRINT( std::cout << "\n\t\t part> Starting vcycle " << m_cycle+1 <<" out of " << partition_config.num_vcycles <<"\n\n");
 
-                if(cycle+1 == partition_config.num_vcycles && partition_config.no_refinement_in_last_iteration) {
+	        if(cycle+1 == partition_config.num_vcycles && partition_config.no_refinement_in_last_iteration) {
                         config.label_iterations_refinement = 0;
                 }
                 
 if( rank == ROOT ) {
     PRINT(std::cout <<  "log>part: " << cycle << " , coarsest_graph_size_max " << coarsest_graph_size_max << std::endl;)
 }
+     PRINT(std::cout <<  "part> " << cycle << " , coarsest_graph_size_max " << coarsest_graph_size_max << std::endl;)
                 //the core partitioning routine
                 vcycle( communicator, config, G, qm, PEtree, coarsest_graph_size_max, cycle!=0 );
 
@@ -285,6 +287,8 @@ PRINT(std::cout << "global_ghost_nodes "<< global_ghost_nodes << " , max_ghost_n
                         //perform initial partition as normal
                         qm.set_initial_numNodes( Q.number_of_global_nodes() );
                         qm.set_initial_numEdges( Q.number_of_global_edges() );
+			if(rank == ROOT)
+			  std::cout << "part> rank " << rank << " num_nodes = " << Q.number_of_global_nodes() << "num_edges = " << Q.number_of_global_edges() << std::endl;
                         initial_partitioning_algorithm ip;
                         ip.perform_partitioning( communicator, config, Q );
                 }

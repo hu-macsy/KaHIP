@@ -134,13 +134,20 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         if (rank == ROOT) {
                             std::cout << "WARNING : Empty list of high degree nodes! " << std::endl;
                             std::cout << " ===========  Copying graph   =========== " << std::endl;
-                        }
+			    std::cout << "log> graph number of nodes "
+				      << G.number_of_global_nodes() << " number of edges "
+				      << G.number_of_global_edges() << std::endl;
+                            std::cout << "log> ghost nodes, original graph " << in_G.number_of_ghost_nodes() << " copied g " << G.number_of_ghost_nodes() << std::endl;
+
+			}
                     } else {
                         parallel_graph_access::get_reduced_graph(in_G, G, global_hdn, communicator);
                         if (rank==ROOT){
                             std::cout << " ============  Reducing graph  =========== " <<  std::endl;
                             std::cout << "log> number of affected nodes " << global_hdn.size() << std::endl;
-                            std::cout << "log> reduced graph number of edges " << G.number_of_global_edges() << std::endl;
+                            std::cout << "log> reduced graph number of nodes "
+				      << G.number_of_global_nodes() << " number of edges "
+				      << G.number_of_global_edges() << std::endl;
                             std::cout << "log> ghost nodes, original graph " << in_G.number_of_ghost_nodes() << " reduced g " << G.number_of_ghost_nodes() << std::endl;
                         }
                     }
