@@ -118,7 +118,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		const NodeID global_max_degree = in_G.get_global_max_degree(communicator);
 		parallel_graph_access G(communicator);
 		std::vector<NodeID> global_hdn;
-		global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.5 , false);
+		//global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.5 , false);
 /*
                 	if (rank == ROOT) {
                 		std::cout << " Rank  = " << rank
@@ -159,7 +159,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
 		assert( G.number_of_local_edges() <= in_G.number_of_local_edges() );    //edges are less or equal
 		
-		double reducing_graph_time = t.elapsed(); // including finding high degree nodes
+		double reducing_graph_time = t.elapsed(); // including finding high degree nodes // barrier in get_reduced, get_copy
 		    
 
                 if( partition_config.refinement_focus ){
@@ -251,10 +251,8 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 
-		if (global_hdn.empty())
-			partition_config.label_iterations = 0;		
-		else
-			partition_config.label_iterations = partition_config.label_iterations_refinement;		
+	       
+		partition_config.label_iterations = partition_config.label_iterations_refinement;		
 		
 		if( partition_config.label_iterations != 0 ) {
 			partition_config.total_num_labels = partition_config.k;
@@ -263,7 +261,6 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 			const EdgeWeight balance = qm.balance( partition_config, G, communicator );
 
 			if ( rank == ROOT ) {
-				std::cout << " log> LAST REFINEMENT STEP ON FINEST GRAPH " << std::endl; 
 				std::cout << " log> config.label_iterations = " << partition_config.label_iterations << std::endl; 
 				std::cout << " log> config.total_num_labels = " << partition_config.total_num_labels << std::endl;
 				std::cout << " log> config.k = " <<  partition_config.k << std::endl;
@@ -304,10 +301,14 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 			PPartitionConfig working_config = partition_config;
 			working_config.vcycle = false; // assure that we actually can improve the cut
 			parallel_label_compress< std::vector< NodeWeight> > plc_refinement;
-			plc_refinement.perform_parallel_label_compression( working_config, in_G, false, false, PEtree); // balance, for_coarsening
+			if (!global_hdn.empty()) {
+			  if ( rank == ROOT )
+			    std::cout << " log> LAST REFINEMENT STEP ON FINEST GRAPH " << std::endl; 
+			  plc_refinement.perform_parallel_label_compression( working_config, in_G, false, false, PEtree); // balance, for_coarsening
+			}
 		 }
 		
-		double final_refine_time = t.elapsed();
+		double final_refine_time = t.elapsed(); 
 
 		
                 //qm.evaluateMapping(in_G, PEtree, communicator);
@@ -333,6 +334,9 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 			if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance_no_final_ref << std::endl; // not currently true because balance = false in plc
                 }
 		else {
+		  if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut_no_final_ref << " = " << edge_cut << std::endl; // in_G has more edges, thus a higher cut
+		  if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance_no_final_ref << std::endl; // not currently true because balance = false in plc
+		  if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  qap << " = " << qap_no_final_ref << std::endl; // not currently true because balance = false in plc
 			assert(edge_cut_no_final_ref == edge_cut);
 			assert(balance_no_final_ref == balance);
 			assert(qap_no_final_ref == qap);
