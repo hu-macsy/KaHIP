@@ -62,8 +62,6 @@ distributed_quality_metrics distributed_partitioner::perform_partitioning( MPI_C
         PEID rank;
         MPI_Comm_rank( communicator, &rank);
 
-	//std::cout << "\n\t\t part> Rank = " << rank << " Perform partitioning num_vcycles = " << partition_config.num_vcycles  << "\n\n";
-
         for( int cycle = 0; cycle < partition_config.num_vcycles; cycle++) {
                 t.restart();
                 m_cycle = cycle;
@@ -91,8 +89,6 @@ if( rank == ROOT ) {
                 }
 #ifndef NDEBUG
                 check_labels(communicator, config, G);
-		// if( rank == ROOT )
-		//   std::cout <<  "log>part: " << "checking labels"  << std::endl;
 #endif
 
                 elapsed += t.elapsed();
@@ -290,9 +286,9 @@ PRINT(std::cout << "global_ghost_nodes "<< global_ghost_nodes << " , max_ghost_n
                         //perform initial partition as normal
                         qm.set_initial_numNodes( Q.number_of_global_nodes() );
                         qm.set_initial_numEdges( Q.number_of_global_edges() );
-			std::cout << "part> rank " << rank << " num_global_nodes = " << Q.number_of_global_nodes() << "num_global_edges = " << Q.number_of_global_edges()
-				  << " num_local_nodes = " << Q.number_of_local_nodes() << "num_local_edges = " << Q.number_of_local_edges() 
-				  << std::endl;
+			// std::cout << "part> rank " << rank << " num_global_nodes = " << Q.number_of_global_nodes() << "num_global_edges = " << Q.number_of_global_edges()
+			// 	  << " num_local_nodes = " << Q.number_of_local_nodes() << "num_local_edges = " << Q.number_of_local_edges() 
+			// 	  << std::endl;
                         initial_partitioning_algorithm ip;
                         ip.perform_partitioning( communicator, config, Q );
                 }
