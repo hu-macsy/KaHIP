@@ -143,7 +143,7 @@ void parallel_graph_access::get_reduced_graph(parallel_graph_access & outG, std:
 	std::vector< std::vector< NodeID > > local_edge_weights;
 	local_edge_weights.resize(local_nnodes);
 	EdgeID edge_counter = 0;
-	  
+	int numIsolatedNodes = 0;
 	  
 	forall_local_nodes((*this),u) {
 		if (is_high_degree_node[(*this).getNodeLabel(u)] == true) {
@@ -182,7 +182,11 @@ void parallel_graph_access::get_reduced_graph(parallel_graph_access & outG, std:
 					edge_counter++;
 				}
 				// there is not a local neighboring node -- weird behaviour
-				else std::cout << "WARNING: high degree node is added as an isolated node!" << std::endl; 
+				else{
+                    //std::cout << "WARNING: high degree node is added as an isolated node!" << std::endl; 
+                    numIsolatedNodes++;
+                } 
+
 			}
 		}
 		else {
@@ -197,6 +201,10 @@ void parallel_graph_access::get_reduced_graph(parallel_graph_access & outG, std:
 			} endfor
 				  }
 	} endfor
+
+    if(numIsolatedNodes>0){
+        std::cout << "WARNING, rank " << rank << " now has " << numIsolatedNodes <<" isolated nodes " <<  std::endl; 
+    }
 
 		  
 	int t_edge_count = 0;
@@ -344,8 +352,8 @@ std::vector<NodeID> parallel_graph_access::get_high_degree_local_nodes_by_num(co
 
     //sort vertex IDs in increasing order based of their degree
     std::sort( global_indices.begin(), global_indices.end(), 
-        [&local_degrees](NodeID i, NodeID j){
-            return local_degrees[i]>local_degrees[j]; 
+        [&](NodeID i, NodeID j){
+            return local_degrees[getLocalID(i)]>local_degrees[getLocalID(j)]; 
         }
     );
     //in case numNodes is greater than all the local nodes
@@ -385,8 +393,8 @@ std::vector<NodeID> parallel_graph_access::get_high_ghost_degree_local_nodes_by_
 
     //sort vertex IDs in increasing order based of their ghost degree
     std::sort( global_indices.begin(), global_indices.end(), 
-        [&ghostDeg](NodeID i, NodeID j){
-            return ghostDeg[i]>ghostDeg[j]; 
+        [&](NodeID i, NodeID j){
+            return ghostDeg[getLocalID(i)]>ghostDeg[getLocalID(j)]; 
         }
     );
 
@@ -403,7 +411,8 @@ std::vector<NodeID> parallel_graph_access::get_high_degree_global_nodes_by_degre
     }else{
         local_high_degree_nodes = get_high_degree_local_nodes_by_degree(minDegree);
     }
-
+std::sort( local_high_degree_nodes.begin(), local_high_degree_nodes.end(), [&](NodeID i, NodeID j){ return getNodeDegree(getLocalID(i))>getNodeDegree(getLocalID(j)); } );
+std::cout << rank <<": affected nodes: highest degree " << getNodeDegree( getLocalID(local_high_degree_nodes[0]) ) << " lowest degree " << getNodeDegree( getLocalID(local_high_degree_nodes.back()) ) << std::endl;
     return get_all_global_nodes(local_high_degree_nodes);
 }
 
@@ -415,7 +424,7 @@ std::vector<NodeID> parallel_graph_access::get_high_degree_global_nodes_by_num(c
     }else{
         local_high_degree_nodes = get_high_degree_local_nodes_by_num(numNodes);
     }
-
+std::cout << rank <<": affected nodes: highest degree " << getNodeDegree( getLocalID(local_high_degree_nodes[0]) ) << " lowest degree " << getNodeDegree( getLocalID(local_high_degree_nodes.back()) ) << std::endl;
     return get_all_global_nodes(local_high_degree_nodes);
 
 }
