@@ -394,6 +394,33 @@ public:
 		} endfor
 			  return true;
 	}
+
+
+  	/* printing functions for fast debugging (no balance management) */
+	bool print_graph_local_no_balance() {
+		forall_local_nodes((*this), node) {
+			std::cout << "R:" << rank << " node = " << node << " label = "
+				  << (*this).getNodeLabel(node)
+				  << " weight = " << (*this).getNodeWeight(node) <<  " degree = "
+				  << (*this).getNodeDegree(node)   << " sp_index = "
+				  << (*this).getSecondPartitionIndex(node) << std::endl;
+		} endfor      
+			  return true;
+	}
+	
+
+	bool print_graph_ghost_no_balance() {
+		forall_ghost_nodes((*this), node) {
+			std::cout << "R:" << rank << " ghost node = " << node << " label = "
+				  << (*this).getNodeLabel(node)
+				  << " weight = " << (*this).getNodeWeight(node) << " sp_index = "
+				  << (*this).getSecondPartitionIndex(node)  << std::endl;
+			
+		} endfor
+			  return true;
+	}
+
+
   
   
         //TODO: communicator not really needed, just to indicate that this operation requires global communication. remove?

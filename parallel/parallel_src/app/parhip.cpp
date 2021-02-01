@@ -120,14 +120,14 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                     std::vector<NodeID> global_hdn;
                     //global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.8 , false);
 
-                	// if (rank == ROOT) {
-                	// 	std::cout << " Rank  = " << rank
-                	// 		  << " global_hdn [ "  << std::endl;
-                	// 	for (auto i = global_hdn.begin(); i != global_hdn.end(); ++i)
-                	// 		std::cout << *i << ' ';
-                	// 	std::cout  <<" ]"<< std::endl;
+                	if (rank == ROOT) {
+                		std::cout << " Rank  = " << rank
+                			  << " global_hdn [ "  << std::endl;
+                		for (auto i = global_hdn.begin(); i != global_hdn.end(); ++i)
+                			std::cout << *i << ' ';
+                		std::cout  <<" ]"<< std::endl;
                 		
-                	// }
+                	}
                     if(global_hdn.empty()) {
                         // TODO: find more elegant way to do it.
                         parallel_graph_access::get_graph_copy(in_G, G, communicator);
@@ -154,7 +154,17 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                     assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
                     assert( G.number_of_local_edges() <= in_G.number_of_local_edges() );    //edges are less or equal
 
+		    // if (rank == ROOT)
+		    // 	    std::cout << "PRINTING in_G: "<< std::endl;
+		    // in_G.print_graph_local_no_balance();
+		    // in_G.print_graph_ghost_no_balance();
+		    // MPI_Barrier(communicator);
+		    // if (rank == ROOT)
+		    // 	    std::cout << "PRINTING G: "<< std::endl; 
+		    // G.print_graph_local_no_balance();
+		    // G.print_graph_ghost_no_balance();
 
+		    
 
                 if( partition_config.refinement_focus ){
                         //in this version, the coarsening factor depends on the input size. As cluster_coarsening_factor sets a limit to the size
