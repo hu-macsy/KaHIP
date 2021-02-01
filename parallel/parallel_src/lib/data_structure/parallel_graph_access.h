@@ -495,39 +495,41 @@ public:
 	  
 		forall_local_nodes(inG,u) {
 			if (is_high_degree_node[inG.getNodeLabel(u)] == true) {
-				/* parse the edge list */
+				/* parse the edge list of u */
 				EdgeID edge_count_per_node = 0;
+			        long first_local_edge = -1;
 				forall_out_edges(inG, e, u) {
 					NodeID v = inG.getEdgeTarget(e);
 					EdgeWeight weight = inG.getEdgeWeight(e);
-					// add the edges to all non high degree nodes
+					// add edges to all non high degree nodes, v
 					if ( !is_high_degree_node[inG.getNodeLabel(v)] ) {
 						local_edge_lists[u].push_back(inG.getNodeLabel(v));
 						local_edge_weights[u].push_back(weight);	      
 						edge_counter++;
 						edge_count_per_node++;
 					}
+					else if (first_local_edge == -1 && inG.is_local_node(v)) {
+						/* store the first local node in the edge list of u */
+						first_local_edge = e;
+					}
 				} endfor
 				if (edge_count_per_node == 0) {
-					// this node is not connected to non high degree nodes.
-					// possible strategies:
-					// a) connect with the first high degree node in the list
-					// b) connect with first local high degree node in the list
-					// c) if the first one is not local node, do not connect it.
-					EdgeID e = inG.get_first_edge(u);
-					NodeID v = inG.getEdgeTarget(e);
-					EdgeWeight weight = inG.getEdgeWeight(e);
-					// strategy c) connect with first one only if it is local. If not, add it as isolated node
-					if ( inG.is_local_node(v) ) {
+					// u has no non high degree neighbors, connect it with first local (high degree) node
+					// if local node exists:
+					if ( first_local_edge != -1 ) {
+						// connect u --> v (local node)
+						NodeID v = inG.getEdgeTarget((EdgeID) first_local_edge);
+						EdgeWeight weight = inG.getEdgeWeight((EdgeID) first_local_edge);
 						local_edge_lists[u].push_back(inG.getNodeLabel(v));
 						local_edge_weights[u].push_back(weight);              
 						edge_counter++;
-						// add also the edge for the corresponding neighbor
+						// connect also v --> u
 						NodeID w = inG.getNodeLabel(u);
 						local_edge_lists[v].push_back(w);
 						local_edge_weights[v].push_back(weight);              
 						edge_counter++;
 					}
+					// there is not a local neighboring node -- weird behaviour
 					else std::cout << "WARNING: high degree node is added as an isolated node!" << std::endl; 
 				}
 			}
