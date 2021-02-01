@@ -55,11 +55,9 @@ int main(int argn, char **argv) {
         MPI_Comm_rank( communicator, &rank);
         MPI_Comm_size( communicator, &size);
 
-
 [[maybe_unused]] double myMem;
 if( rank == ROOT ) std::cout<< __LINE__ << ", before reading graph, starting mem usage" << std::endl;
 getFreeRam(MPI_COMM_WORLD, myMem, true);
-
 
         timer t;
         MPI_Barrier(MPI_COMM_WORLD);
@@ -170,17 +168,17 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         partition_config.cluster_coarsening_factor = G.number_of_global_nodes() / (coarsening_factor*partition_config.k);
                         const int coarsening_levels = partition_config.max_coarsening_levels;
                         if( !partition_config.stop_factor ){
-				partition_config.stop_factor = G.number_of_global_nodes()/(coarsening_factor*(coarsening_levels-1));
-				//set a minimum for the global size of the coarsest graph as this greatly affects the time for initial partitioning
-				//this way, each PE will have 2000 vertices
-				//TODO: maybe differentiate between meshes and complex networks?
-				partition_config.stop_factor = std::min( partition_config.stop_factor, size*3000 );
+                        partition_config.stop_factor = G.number_of_global_nodes()/(coarsening_factor*(coarsening_levels-1));
+                        //set a minimum for the global size of the coarsest graph as this greatly affects the time for initial partitioning
+                        //this way, each PE will have 2000 vertices
+                        //TODO: maybe differentiate between meshes and complex networks?
+                        partition_config.stop_factor = std::min( partition_config.stop_factor, size*3000 );
                         }
                 }
                 
                 if(rank == ROOT) {
                         PRINT(std::cout <<  "log> cluster coarsening factor is set to " <<  partition_config.cluster_coarsening_factor  << std::endl;)
-				}
+                }
                 
                 //TODO: not sure about this but I think it makes more sense not to divide it. If not divided, coarsening will stop when the global 
                 //number of vertices of the coarsest graph is less than stop_factor*k. If we divide by k, then stop_factor is the limit for the global size
@@ -201,13 +199,13 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 distributed_partitioner::generate_random_choices( partition_config );
 
                 //G.printMemoryUsage(std::cout);
-		if( rank == ROOT ) std::cout<< __LINE__ << ", allocated data structs" << std::endl;
-		getFreeRam(MPI_COMM_WORLD, myMem, true);
+if( rank == ROOT ) std::cout<< __LINE__ << ", allocated data structs" << std::endl;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
 
                 //compute some stats
                 [[maybe_unused]] auto [red_globalInterEdges, red_globalIntraEdges, red_globalWeight ] = G.get_ghostEdges_nodeWeight();
                 auto [globalInterEdges, globalIntraEdges, globalWeight ] = in_G.get_ghostEdges_nodeWeight();
-		
+
                 if( rank == ROOT ) {
                         std::cout <<  "log> ghost edges/m " <<  globalInterEdges/(double)in_G.number_of_global_edges() << std::endl;
                         std::cout <<  "log> local edges/m " <<  globalIntraEdges/(double)in_G.number_of_global_edges() << std::endl;
@@ -248,11 +246,10 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 MPI_Barrier(communicator);
                 double running_time = t.elapsed();
 
-		if( rank == ROOT ) std::cout<< __LINE__ << ", finished partitioning " << std::endl;
-		getFreeRam(MPI_COMM_WORLD, myMem, true);
+if( rank == ROOT ) std::cout<< __LINE__ << ", finished partitioning " << std::endl;
+getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 
-	       
 		partition_config.label_iterations = partition_config.label_iterations_refinement;		
 		
 		if( partition_config.label_iterations != 0 ) {
@@ -311,10 +308,10 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		
 		double final_refine_time = t.elapsed(); 
 
-		
+
                 //qm.evaluateMapping(in_G, PEtree, communicator);
 
-		EdgeWeight edge_cut = qm.edge_cut( in_G, communicator );
+                EdgeWeight edge_cut = qm.edge_cut( in_G, communicator );
                 EdgeWeight qap = 0;
                 //if tree is empty, qap is not to be calculated
                 if (partition_config.integrated_mapping)
@@ -323,26 +320,24 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 PRINT(double balance_load  = qm.balance_load( partition_config, in_G, communicator );)
                 PRINT(double balance_load_dist  = qm.balance_load_dist( partition_config, in_G, communicator );)
 
-	        distributed_quality_metrics qm_no_final_ref;
-		EdgeWeight edge_cut_no_final_ref = qm_no_final_ref.edge_cut( G, communicator );
-		EdgeWeight qap_no_final_ref = 0;
-		if (partition_config.integrated_mapping)
-                        qap_no_final_ref = qm_no_final_ref.total_qap( G, PEtree, communicator );
+                distributed_quality_metrics qm_no_final_ref;
+                EdgeWeight edge_cut_no_final_ref = qm_no_final_ref.edge_cut( G, communicator );
+                EdgeWeight qap_no_final_ref = 0;
+                if (partition_config.integrated_mapping)
+                    qap_no_final_ref = qm_no_final_ref.total_qap( G, PEtree, communicator );
 
-		EdgeWeight balance_no_final_ref  = qm_no_final_ref.balance( partition_config, G, communicator );
-		if (!global_hdn.empty()) {
-			if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut_no_final_ref << " < " << edge_cut << std::endl; // in_G has more edges, thus a higher cut
-			if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance_no_final_ref << std::endl; // not currently true because balance = false in plc
+                EdgeWeight balance_no_final_ref  = qm_no_final_ref.balance( partition_config, G, communicator );
+                if (!global_hdn.empty()) {
+                    if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut_no_final_ref << " < " << edge_cut << std::endl; // in_G has more edges, thus a higher cut
+                    if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance_no_final_ref << std::endl; // not currently true because balance = false in plc
+                }else {
+                    if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut_no_final_ref << " = " << edge_cut << std::endl; // in_G has more edges, thus a higher cut
+                    if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance_no_final_ref << std::endl; // not currently true because balance = false in plc
+                    if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  qap << " = " << qap_no_final_ref << std::endl; // not currently true because balance = false in plc
+                    assert(edge_cut_no_final_ref == edge_cut);
+                    assert(balance_no_final_ref == balance);
+                    assert(qap_no_final_ref == qap);
                 }
-		else {
-		  if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut_no_final_ref << " = " << edge_cut << std::endl; // in_G has more edges, thus a higher cut
-		  if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance_no_final_ref << std::endl; // not currently true because balance = false in plc
-		  if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  qap << " = " << qap_no_final_ref << std::endl; // not currently true because balance = false in plc
-			assert(edge_cut_no_final_ref == edge_cut);
-			assert(balance_no_final_ref == balance);
-			assert(qap_no_final_ref == qap);
-		}
-
 
                 if( rank == ROOT ) {
                         std::cout << "log>" << "=====================================" << std::endl;
@@ -363,10 +358,8 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         std::cout << "log> final edge cut " <<  edge_cut  << std::endl;
                         std::cout << "log> initial qap  " <<  qm.get_initial_qap()  << std::endl; // comparing to adding network information
                         std::cout << "log> final qap  " <<  qap  << std::endl;
-			
                         std::cout << "log> final balance "  <<  balance   << std::endl;
-
-			std::cout << "log> max congestion " <<  qm.get_max_congestion() << std::endl;
+                        std::cout << "log> max congestion " <<  qm.get_max_congestion() << std::endl;
                         std::cout << "log> max dilation " <<  qm.get_max_dilation() << std::endl;
                         std::cout << "log> sum dilation " <<  qm.get_sum_dilation() << std::endl;
                         std::cout << "log> avg dilation  " << qm.get_avg_dilation()  << std::endl;

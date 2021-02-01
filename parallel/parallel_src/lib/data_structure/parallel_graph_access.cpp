@@ -312,7 +312,7 @@ void parallel_graph_access::get_graph_copy(parallel_graph_access & outG, MPI_Com
 }
 
 
-std::vector<NodeID> parallel_graph_access::get_high_degree_local_nodes(const NodeID minDegree) {
+std::vector<NodeID> parallel_graph_access::get_high_degree_local_nodes_by_degree(const NodeID minDegree) {
     std::vector<NodeID> local_high_degree_nodes;
 
     forall_local_nodes((*this), node) {
