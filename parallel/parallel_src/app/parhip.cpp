@@ -118,7 +118,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		const NodeID global_max_degree = in_G.get_global_max_degree(communicator);
 		parallel_graph_access G(communicator);
 		std::vector<NodeID> global_hdn;
-		//global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.5 , false);
+		global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.5 , false);
 /*
                 	if (rank == ROOT) {
                 		std::cout << " Rank  = " << rank
@@ -131,7 +131,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 */                    
 		if(global_hdn.empty()) {
 			// TODO: find more elegant way to do it.
-			parallel_graph_access::get_graph_copy(in_G, G, communicator);
+		        in_G.get_graph_copy(G, communicator);
 			if (rank == ROOT) {
 				std::cout << "WARNING : Empty list of high degree nodes! " << std::endl;
 				std::cout << " ======================================== " << std::endl;
@@ -144,7 +144,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		    
 			}
 		} else {
-			parallel_graph_access::get_reduced_graph(in_G, G, global_hdn, communicator);
+			in_G.get_reduced_graph(G, global_hdn, communicator);
 			if (rank==ROOT){
 				std::cout << " ========================================= " << std::endl;
 				std::cout << " ============  Reducing graph  =========== " <<  std::endl;

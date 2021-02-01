@@ -115,6 +115,200 @@ void parallel_graph_access::set_comm_rounds_up(ULONG comm_rounds) {
         m_comm_rounds_up = comm_rounds;
 }
 
+
+void parallel_graph_access::get_reduced_graph(parallel_graph_access & outG, std::vector< NodeID > node_list, MPI_Comm communicator) {
+	assert(!node_list.empty());
+	int rank, comm_size;
+	MPI_Comm_rank( communicator, &rank);
+	MPI_Comm_size( communicator, &comm_size);
+	NodeID global_nnodes = (*this).number_of_global_nodes();
+	NodeID local_nnodes = (*this).number_of_local_nodes();
+			
+		
+	std::vector<bool> is_high_degree_node(global_nnodes, false);
+	for(auto& u : node_list)
+		is_high_degree_node[u] = true;
+		
+	NodeID n = global_nnodes;
+	ULONG from  = rank     * ceil(n / (double)comm_size);
+	ULONG to    = (rank+1) * ceil(n / (double)comm_size) - 1;
+	to = std::min<unsigned long>(to, n-1);
+	  
+	  
+	std::vector< std::vector< NodeID > > local_edge_lists;
+	local_edge_lists.resize(local_nnodes);
+	std::vector< std::vector< NodeID > > local_edge_weights;
+	local_edge_weights.resize(local_nnodes);
+	EdgeID edge_counter = 0;
+	  
+	  
+	forall_local_nodes((*this),u) {
+		if (is_high_degree_node[(*this).getNodeLabel(u)] == true) {
+			/* parse the edge list of u */
+			EdgeID edge_count_per_node = 0;
+			long first_local_edge = -1;
+			forall_out_edges((*this), e, u) {
+				NodeID v = (*this).getEdgeTarget(e);
+				EdgeWeight weight = (*this).getEdgeWeight(e);
+				// add edges to all non high degree nodes, v
+				if ( !is_high_degree_node[(*this).getNodeLabel(v)] ) {
+					local_edge_lists[u].push_back((*this).getNodeLabel(v));
+					local_edge_weights[u].push_back(weight);	      
+					edge_counter++;
+					edge_count_per_node++;
+				}
+				else if (first_local_edge == -1 && (*this).is_local_node(v)) {
+					/* store the first local node in the edge list of u */
+					first_local_edge = e;
+				}
+			} endfor
+			if (edge_count_per_node == 0) {
+				// u has no non high degree neighbors, connect it with first local (high degree) node
+				// if local node exists:
+				if ( first_local_edge != -1 ) {
+					// connect u --> v (local node)
+					NodeID v = (*this).getEdgeTarget((EdgeID) first_local_edge);
+					EdgeWeight weight = (*this).getEdgeWeight((EdgeID) first_local_edge);
+					local_edge_lists[u].push_back((*this).getNodeLabel(v));
+					local_edge_weights[u].push_back(weight);              
+					edge_counter++;
+					// connect also v --> u
+					NodeID w = (*this).getNodeLabel(u);
+					local_edge_lists[v].push_back(w);
+					local_edge_weights[v].push_back(weight);              
+					edge_counter++;
+				}
+				// there is not a local neighboring node -- weird behaviour
+				else std::cout << "WARNING: high degree node is added as an isolated node!" << std::endl; 
+			}
+		}
+		else {
+			/* Nodes that are not high degree edges should simply add their entire edge list. */
+			/* Their edge list is not expected to be long anyway. */
+			forall_out_edges((*this), e, u) {
+				NodeID v = (*this).getEdgeTarget(e);
+				EdgeWeight weight = (*this).getEdgeWeight(e);
+				local_edge_lists[u].push_back((*this).getNodeLabel(v));
+				local_edge_weights[u].push_back(weight);
+				edge_counter++;					
+			} endfor
+				  }
+	} endfor
+
+		  
+	int t_edge_count = 0;
+	MPI_Allreduce(&edge_counter, &t_edge_count, 1, MPI_INT, MPI_SUM, communicator);
+	
+	outG.start_construction(local_nnodes, edge_counter*2, global_nnodes, t_edge_count);
+	outG.set_range(from, to);
+	
+		
+	std::vector< NodeID > vertex_dist( comm_size+1, 0 );
+	for( PEID peID = 0; peID <= comm_size; peID++) {
+		vertex_dist[peID] = peID * ceil(n / (double)comm_size); // from positions
+	}
+	outG.set_range_array(vertex_dist);
+	
+	
+	
+	for (NodeID i = 0; i < local_nnodes; ++i) {
+		NodeID node = outG.new_node();
+		outG.setNodeWeight(node, 1);
+		outG.setNodeLabel(node, from+node);
+		outG.setSecondPartitionIndex(node, 0);
+		for( ULONG j = 0; j < local_edge_lists[i].size(); j++) {
+			NodeID target = local_edge_lists[i][j];
+			EdgeID e = outG.new_edge(node, target);
+			EdgeWeight weight = local_edge_weights[i][j];
+			outG.setEdgeWeight(e, weight);
+		}		
+	}
+    	
+	
+	outG.finish_construction(); 
+	MPI_Barrier(communicator);
+}
+  
+
+void parallel_graph_access::get_graph_copy(parallel_graph_access & outG, MPI_Comm communicator) {
+
+	int rank, comm_size;
+	MPI_Comm_rank( communicator, &rank);
+	MPI_Comm_size( communicator, &comm_size);
+	
+	NodeID global_nnodes = (*this).number_of_global_nodes();
+	
+	 	
+	NodeID n = global_nnodes;
+	ULONG from  = rank     * ceil(n / (double)comm_size);
+	ULONG to    = (rank+1) * ceil(n / (double)comm_size) - 1;
+	to = std::min<unsigned long>(to, n-1);
+	ULONG local_no_nodes = 0;
+	if (from <= to)
+		local_no_nodes = to - from + 1;
+	
+	
+
+	std::vector< std::vector< NodeID > > local_edge_lists;
+	local_edge_lists.resize(local_no_nodes);
+	std::vector< std::vector< NodeID > > local_edge_weights;
+	local_edge_weights.resize(local_no_nodes);
+	
+	EdgeID edge_counter = 0;
+	
+	forall_local_nodes((*this),u) {
+		forall_out_edges((*this), e, u) {
+			NodeID v = (*this).getEdgeTarget(e);
+			EdgeWeight weight = (*this).getEdgeWeight(e);
+			local_edge_lists[u].push_back((*this).getNodeLabel(v));
+			local_edge_weights[u].push_back(weight);
+			edge_counter++;
+		} endfor
+	} endfor
+				      
+
+       // for (int i = 0; i < local_edge_lists.size(); i++) {
+       // 	std::cout << "R:" << rank << " node-local_edge_list: " << i << " ";
+       // 	for (int j = 0; j < local_edge_lists[i].size(); j++)
+       // 		std::cout <<  local_edge_lists[i][j] << "  ";
+       // 	std::cout << std::endl;
+       // }		      
+	  
+        int t_edge_count = 0;
+	MPI_Allreduce(&edge_counter, &t_edge_count, 1, MPI_INT, MPI_SUM, communicator);
+	
+	outG.set_number_of_global_edges(t_edge_count);     
+	outG.start_construction((NodeID) local_no_nodes, edge_counter*2, global_nnodes, t_edge_count);
+	outG.set_range(from, to);
+	
+	std::vector< NodeID > vertex_dist( comm_size+1, 0 );
+	for( PEID peID = 0; peID <= comm_size; peID++) {
+		vertex_dist[peID] = peID * ceil(n / (double)comm_size); // from positions
+	}
+	outG.set_range_array(vertex_dist);
+	
+	
+	
+	for (NodeID i = 0; i < local_no_nodes; ++i) {
+		NodeID node = outG.new_node();
+		outG.setNodeWeight(node, 1);
+		outG.setNodeLabel(node, from+node);
+		outG.setSecondPartitionIndex(node, 0);
+		for( ULONG j = 0; j < local_edge_lists[i].size(); j++) {
+			NodeID target = local_edge_lists[i][j];
+			EdgeID e = outG.new_edge(node, target);
+			EdgeWeight weight = local_edge_weights[i][j];
+			outG.setEdgeWeight(e, weight);
+		}
+		
+	}
+	
+	outG.finish_construction(); 
+	MPI_Barrier(communicator);
+         
+}
+
+
 std::vector<NodeID> parallel_graph_access::get_high_degree_local_nodes(const NodeID minDegree) {
     std::vector<NodeID> local_high_degree_nodes;
 
