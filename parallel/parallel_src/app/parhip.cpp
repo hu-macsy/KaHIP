@@ -119,7 +119,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                     parallel_graph_access G(communicator);
                     std::vector<NodeID> global_hdn;
                     global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.8 , false);
-
+/*
                 	if (rank == ROOT) {
                 		std::cout << " Rank  = " << rank
                 			  << " global_hdn [ "  << std::endl;
@@ -128,6 +128,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 		std::cout  <<" ]"<< std::endl;
                 		
                 	}
+*/                    
                     if(global_hdn.empty()) {
                         // TODO: find more elegant way to do it.
                         parallel_graph_access::get_graph_copy(in_G, G, communicator);
@@ -153,7 +154,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                     }
                     assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
                     assert( G.number_of_local_edges() <= in_G.number_of_local_edges() );    //edges are less or equal
-x
+
 		    // if (rank == ROOT)
 		    // 	    std::cout << "PRINTING in_G: "<< std::endl;
 		    // in_G.print_graph_local_no_balance();
@@ -264,12 +265,15 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		if( partition_config.label_iterations != 0 ) {
 			partition_config.total_num_labels = partition_config.k;
 			partition_config.upper_bound_cluster = partition_config.upper_bound_partition;
+            const EdgeWeight edge_cut = qm.edge_cut( G, communicator );
+            const EdgeWeight balance = qm.balance( partition_config, G, communicator );
 
 			if ( rank == ROOT ) {
 				std::cout << " log> LAST REFINEMENT STEP ON FINEST GRAPH " << std::endl; 
 				std::cout << " log> config.label_iterations = " << partition_config.label_iterations << std::endl; 
 				std::cout << " log> config.total_num_labels = " << partition_config.total_num_labels << std::endl;
 				std::cout << " log> config.k = " <<  partition_config.k << std::endl;
+                std::cout << " log> current cut = " << edge_cut << " current balance " << balance << std::endl;
 			}
 			assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
 			assert( G.number_of_local_edges() <= in_G.number_of_local_edges() );    //edges are less or equal
