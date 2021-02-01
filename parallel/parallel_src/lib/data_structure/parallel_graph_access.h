@@ -495,34 +495,49 @@ public:
 	  
 		forall_local_nodes(inG,u) {
 			if (is_high_degree_node[inG.getNodeLabel(u)] == true) {
-				EdgeID e = inG.get_first_edge(u);
-				NodeID v = inG.getEdgeTarget(e);
-				EdgeWeight weight = inG.getEdgeWeight(e);
-				local_edge_lists[u].push_back(inG.getNodeLabel(v));
-				local_edge_weights[u].push_back(weight);	      
-				edge_counter++;
-			}
-			else {
+				/* parse the edge list */
+				EdgeID edge_count_per_node = 0;
 				forall_out_edges(inG, e, u) {
 					NodeID v = inG.getEdgeTarget(e);
-					if (is_high_degree_node[inG.getNodeLabel(v)] != true) {
-						EdgeWeight weight = inG.getEdgeWeight(e);
+					EdgeWeight weight = inG.getEdgeWeight(e);
+					// add the edges to all non high degree nodes
+					if ( !is_high_degree_node[inG.getNodeLabel(v)] ) {
 						local_edge_lists[u].push_back(inG.getNodeLabel(v));
-						local_edge_weights[u].push_back(weight);
+						local_edge_weights[u].push_back(weight);	      
 						edge_counter++;
-					}
-					else {
-						EdgeID e = inG.get_first_edge(v);
-						NodeID w = inG.getEdgeTarget(e);
-						if (w == u) {
-							local_edge_lists[u].push_back(inG.getNodeLabel(v));
-							EdgeWeight weight = inG.getEdgeWeight(e);
-							local_edge_weights[u].push_back(weight);
-							edge_counter++;
-						}
+						edge_count_per_node++;
 					}
 				} endfor
-					  }
+				if (edge_count_per_node == 0) {
+					// this node is not connected to non high degree nodes
+					// must connect with some high degree node
+					// take the first one in the edge list
+					EdgeID e = inG.get_first_edge(u);
+					NodeID v = inG.getEdgeTarget(e);
+					EdgeWeight weight = inG.getEdgeWeight(e);
+					local_edge_lists[u].push_back(inG.getNodeLabel(v));
+					local_edge_weights[u].push_back(weight);              
+					edge_counter++;
+					// add here also the edge for the corresponding neighbor
+					NodeID w = inG.getNodeLabel(u);
+					// v node must be local! Or else I cannot access local_edge_lists[v]
+					assert(inG.is_local_node(v));
+					local_edge_lists[v].push_back(w);
+					local_edge_weights[v].push_back(weight);              
+					edge_counter++;
+				}
+			}
+			else {
+			  /* Nodes that are not high degree edges should simply add their entire edge list. */
+			  /* Their edge list is not expected to be long anyway. */
+				forall_out_edges(inG, e, u) {
+					NodeID v = inG.getEdgeTarget(e);
+					EdgeWeight weight = inG.getEdgeWeight(e);
+					local_edge_lists[u].push_back(inG.getNodeLabel(v));
+					local_edge_weights[u].push_back(weight);
+					edge_counter++;					
+				} endfor
+				    }
 		} endfor
 			  
 	 
