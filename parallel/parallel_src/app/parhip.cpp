@@ -119,7 +119,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                     
                     const NodeID numLocalNodes = 0.2*in_G.number_of_global_nodes()/size;
                     std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, false);
-/*
+
                 	if (rank == ROOT) {
                 		std::cout << " Rank  = " << rank
                 			  << " global_hdn [ "  << std::endl;
@@ -127,8 +127,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 			std::cout << *i << ' ';
                 		std::cout  <<" ]"<< std::endl;
                 		
-                	}
-*/                    
+                	}                    
 
                     parallel_graph_access G(communicator);
 
@@ -161,6 +160,12 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		}
 		assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
 		assert( G.number_of_local_edges() <= in_G.number_of_local_edges() );    //edges are less or equal
+
+		if(rank == ROOT) {
+		  std::cout << "printing reduced graph" << std::endl;
+		}
+		G.print_graph_local_no_balance();
+		G.print_graph_ghost_no_balance();
 		
 		double reducing_graph_time = t.elapsed(); // including finding high degree nodes // barrier in get_reduced, get_copy
 
@@ -252,6 +257,11 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 if( rank == ROOT ) std::cout<< __LINE__ << ", finished partitioning " << std::endl;
 getFreeRam(MPI_COMM_WORLD, myMem, true);
 
+ if (rank == ROOT)
+   std::cout << "printing G" << std::endl;
+ G.print_graph_local();
+ MPI_Barrier(MPI_COMM_WORLD);
+ 
 
         //partition_config.label_iterations = partition_config.label_iterations_refinement;
 		partition_config.label_iterations = 2; //temporary,hardwire to 2
@@ -286,11 +296,16 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 			// the labels of local nodes equal to the block labels
 			// (as if already partitioned in k parts ).
 
-            in_G.init_balance_management_from_graph( partition_config, G);
+			    //in_G.init_balance_management_from_graph( partition_config, G);
+
             //vs
             // as in distributed_partitioner.cpp
             //partition_config.total_num_labels = partition_config.k; //forces refinement balance
-            //in_G.init_balance_management( partition_config );
+
+	    in_G.init_balance_management( partition_config );
+			if (rank == ROOT)
+			  std::cout << "printing in_G diff init balance manage" << std::endl;
+			in_G.print_graph_local();
 
 			forall_ghost_nodes(in_G, node) {
 				//in_G.setSecondPartitionIndex(node, in_G.getNodeLabel(node));
