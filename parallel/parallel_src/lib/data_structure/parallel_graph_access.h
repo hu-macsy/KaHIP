@@ -509,22 +509,26 @@ public:
 					}
 				} endfor
 				if (edge_count_per_node == 0) {
-					// this node is not connected to non high degree nodes
-					// must connect with some high degree node
-					// take the first one in the edge list
+					// this node is not connected to non high degree nodes.
+					// possible strategies:
+					// a) connect with the first high degree node in the list
+					// b) connect with first local high degree node in the list
+					// c) if the first one is not local node, do not connect it.
 					EdgeID e = inG.get_first_edge(u);
 					NodeID v = inG.getEdgeTarget(e);
 					EdgeWeight weight = inG.getEdgeWeight(e);
-					local_edge_lists[u].push_back(inG.getNodeLabel(v));
-					local_edge_weights[u].push_back(weight);              
-					edge_counter++;
-					// add here also the edge for the corresponding neighbor
-					NodeID w = inG.getNodeLabel(u);
-					// v node must be local! Or else I cannot access local_edge_lists[v]
-					assert(inG.is_local_node(v));
-					local_edge_lists[v].push_back(w);
-					local_edge_weights[v].push_back(weight);              
-					edge_counter++;
+					// strategy c) connect with first one only if it is local. If not, add it as isolated node
+					if ( inG.is_local_node(v) ) {
+						local_edge_lists[u].push_back(inG.getNodeLabel(v));
+						local_edge_weights[u].push_back(weight);              
+						edge_counter++;
+						// add also the edge for the corresponding neighbor
+						NodeID w = inG.getNodeLabel(u);
+						local_edge_lists[v].push_back(w);
+						local_edge_weights[v].push_back(weight);              
+						edge_counter++;
+					}
+					else std::cout << "WARNING: high degree node is added as an isolated node!" << std::endl; 
 				}
 			}
 			else {
