@@ -112,13 +112,17 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         }
                 }
 
+		// if (rank == ROOT)
+		//   std::cout << "PRINTING in_G: "<< std::endl;
+		// in_G.print_graph_local_no_balance();
+		// in_G.print_graph_ghost_no_balance();
 		
                 // copy or reduce graph. This is meant to reduce the memory consumption for certain complex graphs
 
                     const NodeID global_max_degree = in_G.get_global_max_degree(communicator);
                     parallel_graph_access G(communicator);
                     std::vector<NodeID> global_hdn;
-                    global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.8 , false);
+                    global_hdn = in_G.get_high_degree_global_nodes( global_max_degree*0.5 , false);
 /*
                 	if (rank == ROOT) {
                 		std::cout << " Rank  = " << rank
@@ -154,18 +158,14 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                     }
                     assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
                     assert( G.number_of_local_edges() <= in_G.number_of_local_edges() );    //edges are less or equal
-
-		    // if (rank == ROOT)
-		    // 	    std::cout << "PRINTING in_G: "<< std::endl;
-		    // in_G.print_graph_local_no_balance();
-		    // in_G.print_graph_ghost_no_balance();
-		    // MPI_Barrier(communicator);
+		    
+		    
 		    // if (rank == ROOT)
 		    // 	    std::cout << "PRINTING G: "<< std::endl; 
 		    // G.print_graph_local_no_balance();
 		    // G.print_graph_ghost_no_balance();
 
-		    
+
 
                 if( partition_config.refinement_focus ){
                         //in this version, the coarsening factor depends on the input size. As cluster_coarsening_factor sets a limit to the size
