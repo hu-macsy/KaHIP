@@ -63,7 +63,7 @@ class parallel_label_compress {
                         }
 
                         if(rank==ROOT){
-                            std::cout << "TEST print: "<< G.number_of_global_nodes()
+                            std::cout << "log> in label compression, number of nodes: "<< G.number_of_global_nodes()
                                     << ", usePEdistances " << usePEdistances << ", only_boundary " << config.only_boundary << std::endl;
                             std::cout <<"log> will do " << config.label_iterations << " rounds of label propagation" << std::endl;
                         }
@@ -85,9 +85,9 @@ class parallel_label_compress {
                                 if( config.adjustable_update_step ){
                                         updateSize = std::max( int (config.update_step_size/(config.label_iterations-i)), 1 );
                                 }
-                                if(rank==ROOT){
-                                     std::cout << "log> level " << i << ", will update ghost nodes every " << updateSize << " seen nodes" << std::endl;
-                                }
+                                // if(rank==ROOT){
+                                //      std::cout << "log> level " << i << ", will update ghost nodes every " << updateSize << " seen nodes" << std::endl;
+                                // }
 
 
                                 forall_local_nodes(G, rnode) {
@@ -111,7 +111,6 @@ class parallel_label_compress {
 
                                         if( G.getNodeDegree(node) == 0) {
                                                 // find a block to assign it to
-					
                                                 if(config.vcycle) {
                                                         NodeWeight prev_block_size = G.getBlockSize( G.getNodeLabel( prev_node ) );
                                                         bool same_block = G.getSecondPartitionIndex(prev_node)==G.getSecondPartitionIndex(node);
@@ -148,7 +147,7 @@ class parallel_label_compress {
                                         if( numSeenNodes%updateSize==0 ){
                                                 num_update_calls++;
                                                 std::chrono::time_point<std::chrono::steady_clock> startTime =  std::chrono::steady_clock::now();
-						G.update_ghost_node_data();
+                                                G.update_ghost_node_data();
                                                 std::chrono::duration<double> endTime = std::chrono::steady_clock::now() - startTime;
                                                 total_ghost_update_time += endTime.count();
                                         }

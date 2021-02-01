@@ -112,12 +112,13 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
                     // copy or reduce graph. This is meant to reduce the memory consumption for certain complex graphs
                     t.restart();
-                    const NodeID global_max_degree = in_G.get_global_max_degree(communicator);
-                    parallel_graph_access G(communicator);
-                    const double avg_degree = in_G.number_of_global_edges()/ (double) in_G.number_of_global_nodes();
-                    if( rank == ROOT ) std::cout<<"log> max degree " << global_max_degree << " average degree " << avg_degree << std::endl;
+                   // const NodeID global_max_degree = in_G.get_global_max_degree(communicator);
+                    //const double avg_degree = in_G.number_of_global_edges()/ (double) in_G.number_of_global_nodes();
+                    //if( rank == ROOT ) std::cout<<"log> max degree " << global_max_degree << " average degree " << avg_degree << std::endl;
                     //std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_degree( avg_degree*1.5 , false);
-                    std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( 0.1*in_G.number_of_global_nodes()/size, false);
+                    
+                    const NodeID numLocalNodes = 0.2*in_G.number_of_global_nodes()/size;
+                    std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, false);
 /*
                 	if (rank == ROOT) {
                 		std::cout << " Rank  = " << rank
@@ -128,6 +129,9 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 		
                 	}
 */                    
+
+                    parallel_graph_access G(communicator);
+
 		if(global_hdn.empty()) {
 			// TODO: find more elegant way to do it.
 		        in_G.get_graph_copy(G, communicator);
@@ -148,7 +152,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 				std::cout << " ========================================= " << std::endl;
 				std::cout << " ============  Reducing graph  =========== " <<  std::endl;
 				std::cout << " ========================================= " << std::endl;
-				std::cout << "log> number of affected nodes " << global_hdn.size() << std::endl;
+				std::cout << "log> number of affected nodes " << global_hdn.size() << ", on each PEs " << numLocalNodes << std::endl;
 				std::cout << "log> reduced graph number of nodes "
 					  << G.number_of_global_nodes() << " number of edges "
 					  << G.number_of_global_edges() << std::endl;
@@ -159,7 +163,6 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		assert( G.number_of_local_edges() <= in_G.number_of_local_edges() );    //edges are less or equal
 		
 		double reducing_graph_time = t.elapsed(); // including finding high degree nodes // barrier in get_reduced, get_copy
-		    
 
                 if( partition_config.refinement_focus ){
                         //in this version, the coarsening factor depends on the input size. As cluster_coarsening_factor sets a limit to the size
@@ -250,8 +253,9 @@ if( rank == ROOT ) std::cout<< __LINE__ << ", finished partitioning " << std::en
 getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 
-		partition_config.label_iterations = partition_config.label_iterations_refinement;		
-		
+        //partition_config.label_iterations = partition_config.label_iterations_refinement;
+		partition_config.label_iterations = 2; //temporary,hardwire to 2
+
 		if( partition_config.label_iterations != 0 ) {
 			partition_config.total_num_labels = partition_config.k;
 			partition_config.upper_bound_cluster = partition_config.upper_bound_partition;
@@ -274,36 +278,50 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 			t.restart();
 		  
-			forall_local_nodes(G, node) {		    
+			forall_local_nodes(G, node) {
 				in_G.setNodeLabel(node, G.getNodeLabel(node));
 				in_G.setSecondPartitionIndex(node, G.getSecondPartitionIndex(node));
 			} endfor
-				  // init_balance_management should be called after setting
-				  // the labels of local nodes equal to the block labels
-				  // (as if already partitioned in k parts ).
-				  in_G.init_balance_management_from_graph( partition_config, G);
+			// init_balance_management should be called after setting
+			// the labels of local nodes equal to the block labels
+			// (as if already partitioned in k parts ).
+
+            in_G.init_balance_management_from_graph( partition_config, G);
+            //vs
+            // as in distributed_partitioner.cpp
+            //partition_config.total_num_labels = partition_config.k; //forces refinement balance
+            //in_G.init_balance_management( partition_config );
 
 			forall_ghost_nodes(in_G, node) {
 				//in_G.setSecondPartitionIndex(node, in_G.getNodeLabel(node));
 				//in_G.setNodeLabel(node, in_G.getGlobalID(node));
 				NodeID label = in_G.getNodeLabel(node); // label is a global node in G
-				NodeID original_local_node = G.getLocalID(label);			  
+				NodeID original_local_node = G.getLocalID(label);
 				NodeID original_node_label = G.getNodeLabel(original_local_node);
 				in_G.setNodeLabel(node, original_node_label);
 				NodeID sp = G.getSecondPartitionIndex(original_local_node);
 				in_G.setSecondPartitionIndex(node, sp);
 				
-	                } endfor
+            } endfor
 
-
+            {   //do we need this? remove it?
+                distributed_quality_metrics qm_tmp;
+                EdgeWeight edge_cut = qm_tmp.edge_cut( in_G, communicator );
+                if( rank == ROOT ) std::cout << "log> edge cut before ref " << edge_cut << std::endl;
+            }
 			PPartitionConfig working_config = partition_config;
 			working_config.vcycle = false; // assure that we actually can improve the cut
 			parallel_label_compress< std::vector< NodeWeight> > plc_refinement;
 			if (!global_hdn.empty()) {
 			  if ( rank == ROOT )
-			    std::cout << " log> LAST REFINEMENT STEP ON FINEST GRAPH " << std::endl; 
+			    std::cout << "log> LAST REFINEMENT STEP ON FINEST GRAPH " << std::endl; 
 			  plc_refinement.perform_parallel_label_compression( working_config, in_G, false, false, PEtree); // balance, for_coarsening
 			}
+            {   //do we need this? remove it?
+                distributed_quality_metrics qm_tmp;
+                EdgeWeight edge_cut = qm_tmp.edge_cut( in_G, communicator );
+                if( rank == ROOT ) std::cout << "log> edge cut after ref " << edge_cut << std::endl;
+            }
 		 }
 		
 		double final_refine_time = t.elapsed(); 
@@ -335,7 +353,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                     if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance_no_final_ref << std::endl; // not currently true because balance = false in plc
                     if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  qap << " = " << qap_no_final_ref << std::endl; // not currently true because balance = false in plc
                     assert(edge_cut_no_final_ref == edge_cut);
-                    assert(balance_no_final_ref == balance);
+//assert(balance_no_final_ref == balance);
                     assert(qap_no_final_ref == qap);
                 }
 
@@ -363,8 +381,8 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         std::cout << "log> max dilation " <<  qm.get_max_dilation() << std::endl;
                         std::cout << "log> sum dilation " <<  qm.get_sum_dilation() << std::endl;
                         std::cout << "log> avg dilation  " << qm.get_avg_dilation()  << std::endl;
-                        PRINT(std::cout << "log> final balance load "  <<  balance_load   << std::endl;)
-			PRINT(std::cout << "log> final balance load dist "  <<  balance_load_dist   << std::endl;)
+                        std::cout << "log> final balance load "  <<  balance_load   << std::endl;
+                        std::cout << "log> final balance load dist "  <<  balance_load_dist   << std::endl;
 				}
                 PRINT(qm.comm_vol( partition_config, in_G, communicator );)
 			PRINT(qm.comm_bnd( partition_config, in_G, communicator );)

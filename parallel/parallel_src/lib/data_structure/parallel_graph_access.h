@@ -493,7 +493,8 @@ public:
         */
         std::vector<NodeID> get_high_degree_global_nodes_by_degree(const NodeID minDegree, const bool useGhostDegree=false) ;
 
-        /** Return vector of size numNodes with global node IDs of all nodes with the highest degree<s
+        /** Return vector of size numNodes*p with global node IDs of all nodes with the highest degrees.
+            Each PE contributes numNodes of its local  vertices, and using p PEs, the return vector has size numNodes*p.
         */
         std::vector<NodeID> get_high_degree_global_nodes_by_num(const NodeID numNodes, const bool useGhostDegree=false ) ;
 
