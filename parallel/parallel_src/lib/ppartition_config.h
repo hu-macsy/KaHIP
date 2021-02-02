@@ -135,10 +135,13 @@ struct PPartitionConfig
         std::vector< int > distances;
         DistanceConstructionAlgorithm distance_construction_algorithm;
 
+
+  
         //=======================================
         //===============integrated mapping =====
         //=======================================
 
+        bool aggressive_removal = false;
         bool integrated_mapping;
         bool ignore_PEtree = false;
         bool only_boundary = false;

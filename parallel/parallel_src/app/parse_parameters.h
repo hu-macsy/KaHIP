@@ -68,15 +68,15 @@ int parse_parameters(int argn, char **argv,
         struct arg_lit *ignore_PEtree                        = arg_lit0(NULL, "ignore_PEtree", "Even if the PE tree is given, ignore it during refinement; used to measure the qap metrics when a PE tree exists but it is ignored" );
         struct arg_int *update_step_size                     = arg_int0(NULL, "update_step_size", NULL, "Every how many nodes to update ghost nodes.");
         struct arg_lit *adjustable_update_step               = arg_lit0(NULL, "adjustable_update_step", "When coarsening/refining,  automatically adjust the update step" );
-
+	struct arg_lit *aggressive_removal		     = arg_lit0(NULL, "aggressive_removal","Enable aggressive removal of edges that will be reintroduced (to manage memory issues).");
         // Define argtable.
         void* argtable[] = {
 #ifdef PARALLEL_LABEL_COMPRESSION
 	  help, filename, filename_output, user_seed, k, inbalance, preconfiguration, vertex_degree_weights,
-                save_partition, save_partition_binary, hierarchy_parameter_string, distance_parameter_string,
-                only_boundary, num_vcycles, label_iterations_refinement, label_iterations_coarsening, stop_factor,
-                no_refinement_in_last_iteration, cluster_coarsening_factor, max_coarsening_levels, ignore_PEtree, 
-                update_step_size, adjustable_update_step,
+	  save_partition, save_partition_binary, hierarchy_parameter_string, distance_parameter_string, aggressive_removal,
+	  only_boundary, num_vcycles, label_iterations_refinement, label_iterations_coarsening, stop_factor,
+	  no_refinement_in_last_iteration, cluster_coarsening_factor, max_coarsening_levels, ignore_PEtree, 
+	  update_step_size, adjustable_update_step,
 #elif defined TOOLBOX 
                 help, filename, k_opt, input_partition_filename, save_partition, save_partition_binary, converter_evaluate,
 #endif 
@@ -367,6 +367,10 @@ int parse_parameters(int argn, char **argv,
             partition_config.ignore_PEtree = true;
         }
 
+	if(aggressive_removal->count > 0) {
+	  partition_config.aggressive_removal = true;
+	}
+	
 //next lines appear in main() at the SEA_mapping code; not sure if (and why) we need them
 //see for example SEA_mapping/app/fastmesh.cpp
 /*
