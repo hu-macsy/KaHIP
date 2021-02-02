@@ -266,6 +266,8 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
         //partition_config.label_iterations = partition_config.label_iterations_refinement;
 		partition_config.label_iterations = 2; //temporary,hardwire to 2
 
+		EdgeWeight inter_ref_edge_cut = 0;
+		
 		if( partition_config.label_iterations != 0 ) {
 			partition_config.total_num_labels = partition_config.k;
 			partition_config.upper_bound_cluster = partition_config.upper_bound_partition;
@@ -296,13 +298,9 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 			// the labels of local nodes equal to the block labels
 			// (as if already partitioned in k parts ).
 
-			    //in_G.init_balance_management_from_graph( partition_config, G);
-
-            //vs
-            // as in distributed_partitioner.cpp
-            //partition_config.total_num_labels = partition_config.k; //forces refinement balance
-
-	    in_G.init_balance_management( partition_config );
+			    
+				  partition_config.total_num_labels = partition_config.k; //forces refinement balance
+			in_G.init_balance_management( partition_config );
 			if (rank == ROOT)
 			  std::cout << "printing in_G diff init balance manage" << std::endl;
 			in_G.print_graph_local();
@@ -317,13 +315,11 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 				NodeID sp = G.getSecondPartitionIndex(original_local_node);
 				in_G.setSecondPartitionIndex(node, sp);
 				
-            } endfor
+			} endfor
 
-            {   //do we need this? remove it?
-                distributed_quality_metrics qm_tmp;
-                EdgeWeight edge_cut = qm_tmp.edge_cut( in_G, communicator );
-                if( rank == ROOT ) std::cout << "log> edge cut before ref " << edge_cut << std::endl;
-            }
+
+			inter_ref_edge_cut = qm.edge_cut( in_G, communicator );
+
 			PPartitionConfig working_config = partition_config;
 			working_config.vcycle = false; // assure that we actually can improve the cut
 			parallel_label_compress< std::vector< NodeWeight> > plc_refinement;
@@ -332,11 +328,6 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 			    std::cout << "log> LAST REFINEMENT STEP ON FINEST GRAPH " << std::endl; 
 			  plc_refinement.perform_parallel_label_compression( working_config, in_G, false, false, PEtree); // balance, for_coarsening
 			}
-            {   //do we need this? remove it?
-                distributed_quality_metrics qm_tmp;
-                EdgeWeight edge_cut = qm_tmp.edge_cut( in_G, communicator );
-                if( rank == ROOT ) std::cout << "log> edge cut after ref " << edge_cut << std::endl;
-            }
 		 }
 		
 		double final_refine_time = t.elapsed(); 
@@ -363,6 +354,10 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 if (!global_hdn.empty()) {
                     if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut_no_final_ref << " < " << edge_cut << std::endl; // in_G has more edges, thus a higher cut
                     if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance_no_final_ref << std::endl; // not currently true because balance = false in plc
+		    if( rank == ROOT ) {
+			    if (inter_ref_edge_cut  <= edge_cut )
+				    std::cout<< __LINE__ << ", WARNING: last refinement step did not improve edgecut: (" << inter_ref_edge_cut << " <= " << edge_cut  << ")" << std::endl;
+		    }
                 }else {
                     if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut_no_final_ref << " = " << edge_cut << std::endl; // in_G has more edges, thus a higher cut
                     if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance_no_final_ref << std::endl; // not currently true because balance = false in plc
