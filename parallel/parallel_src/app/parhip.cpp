@@ -118,16 +118,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                     //std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_degree( avg_degree*1.5 , false);
 
                     const NodeID numLocalNodes = 0.3*in_G.number_of_global_nodes()/size;
-                    std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, false);
-
-                	// if (rank == ROOT) {
-                	// 	std::cout << " Rank  = " << rank
-                	// 		  << " global_hdn [ "  << std::endl;
-                	// 	for (auto i = global_hdn.begin(); i != global_hdn.end(); ++i)
-                	// 		std::cout << *i << ' ';
-                	// 	std::cout  <<" ]"<< std::endl;                		
-                	// } 
-			
+                    std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, true);
 
                     parallel_graph_access G(communicator);
 
@@ -260,10 +251,8 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 if( rank == ROOT ) std::cout<< __LINE__ << ", finished partitioning " << std::endl;
 getFreeRam(MPI_COMM_WORLD, myMem, true);
 
-
-
         //partition_config.label_iterations = partition_config.label_iterations_refinement;
-		partition_config.label_iterations = 2; //temporary,hardwire to 2
+		partition_config.label_iterations = 3; //temporary,hardwire to 2
 
 	        EdgeWeight inter_ref_edge_cut = 0;
 	        double inter_ref_balance = 0;
@@ -288,36 +277,26 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 					" in_G.number_of_ghost_nodes() = " << in_G.number_of_ghost_nodes() << std::endl;
 			//assert( G.number_of_ghost_nodes() <= in_G.number_of_ghost_nodes() );    //edges are less or equal
 
-			t.restart();
-		  
-			forall_local_nodes(G, node) {
-				in_G.setNodeLabel(node, G.getNodeLabel(node));
-				in_G.setSecondPartitionIndex(node, G.getSecondPartitionIndex(node));
-			} endfor
-			// init_balance_management should be called after setting
-			// the labels of local nodes equal to the block labels
-			// (as if already partitioned in k parts ).
+                t.restart();
 
-			    
-				  partition_config.total_num_labels = partition_config.k; //forces refinement balance
-			in_G.init_balance_management( partition_config );
-			
+                forall_local_nodes(G, node) {
+                    in_G.setNodeLabel(node, G.getNodeLabel(node));
+                    in_G.setSecondPartitionIndex(node, G.getSecondPartitionIndex(node));
+                } endfor
+                // init_balance_management should be called after setting
+                // the labels of local nodes equal to the block labels
+                // (as if already partitioned in k parts ).
+                partition_config.total_num_labels = partition_config.k; //forces refinement balance
+                in_G.init_balance_management( partition_config );
 
-			forall_ghost_nodes(in_G, node) {
-				//in_G.setSecondPartitionIndex(node, in_G.getNodeLabel(node));
-				//in_G.setNodeLabel(node, in_G.getGlobalID(node));
-				NodeID label = in_G.getNodeLabel(node); // label is a global node in G
-				NodeID original_local_node = G.getLocalID(label);
-				NodeID original_node_label = G.getNodeLabel(original_local_node);
-				in_G.setNodeLabel(node, original_node_label);
-				NodeID sp = G.getSecondPartitionIndex(original_local_node);
-				in_G.setSecondPartitionIndex(node, sp);
-				
-			} endfor
+                //update the ghost nodes of in_G
+                in_G.update_ghost_node_data();
+                in_G.update_ghost_node_data_global();
+                in_G.update_ghost_node_data_finish();
 
 
-			inter_ref_edge_cut = qm.edge_cut( in_G, communicator );
-			inter_ref_balance = qm.balance( partition_config, in_G, communicator );
+                inter_ref_edge_cut = qm.edge_cut( in_G, communicator );
+                inter_ref_balance = qm.balance( partition_config, in_G, communicator );
 
 			PPartitionConfig working_config = partition_config;
 			working_config.vcycle = false; // assure that we actually can improve the cut
@@ -352,19 +331,23 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 double balance_no_final_ref  = qm_no_final_ref.balance( partition_config, G, communicator );
                 if (!global_hdn.empty()) {
                     if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut_no_final_ref << " < " << edge_cut << std::endl; // in_G has more edges, thus a higher cut
-		    
-		    if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  "inter_ref_balance = " << inter_ref_balance << std::endl;
+                    if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  "inter_ref_balance = " << inter_ref_balance << std::endl;
                     if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance_no_final_ref << std::endl; // currently true because balance = false in plc
-		    if( rank == ROOT ) {
-			    if (inter_ref_edge_cut  <= edge_cut )
-				    std::cout<< __LINE__ << ", WARNING: last refinement step did not improve edgecut: (" << inter_ref_edge_cut << " <= " << edge_cut  << ")" << std::endl;
-		    }
-                }else {
-                    if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut_no_final_ref << " = " << edge_cut << std::endl; 
-		    if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance_no_final_ref << std::endl; 
-                    if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  qap << " = " << qap_no_final_ref << std::endl; 
+
+                    if( rank == ROOT ) {
+                        if (inter_ref_edge_cut  <= edge_cut ){
+                            std::cout<< __LINE__ << ", WARNING: last refinement step did not improve edgecut: (" << inter_ref_edge_cut << " <= " << edge_cut  << ")" << std::endl;
+                        }else{
+                            std::cout<< __LINE__ << ", last refinement step returned edgecut " << edge_cut << ", cut before " << inter_ref_edge_cut  << std::endl;
+                        }
+                    }
+                }else{
+                    if( rank == ROOT ){ std::cout<< __LINE__ << ", " << edge_cut_no_final_ref << " = " << edge_cut << std::endl; 
+                        std::cout<< __LINE__ << ", " <<  balance << " = " << balance_no_final_ref << std::endl; 
+                        std::cout<< __LINE__ << ", " <<  qap << " = " << qap_no_final_ref << std::endl; 
+                    }
                     assert(edge_cut_no_final_ref == edge_cut);
-		    assert(balance_no_final_ref == balance);
+                    assert(balance_no_final_ref == balance);
                     assert(qap_no_final_ref == qap);
                 }
 
@@ -373,15 +356,14 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         std::cout << "log>" << "============AND WE R DONE============" << std::endl;
                         std::cout << "log>" << "=====================================" << std::endl;
                         std::cout << "log> METRICS" << std::endl;
-			std::cout << "log> total reducing graph time elapsed " << reducing_graph_time  << std::endl;
-			std::cout << "log> total partitioning time (c+ip+r) elapsed " <<  running_time << std::endl;
+                        std::cout << "log> total reducing graph time elapsed " << reducing_graph_time  << std::endl;
+                        std::cout << "log> total partitioning time (c+ip+r) elapsed " <<  running_time << std::endl;
                         std::cout << "log> total coarse time " <<  qm.get_coarse_time() << std::endl;
                         std::cout << "log> total inpart time " <<  qm.get_inpart_time() << std::endl;
                         std::cout << "log> total refine time " <<  qm.get_refine_time() << std::endl;
-			std::cout << "log> total final refine time elapsed " << final_refine_time  << std::endl;
-			std::cout << "log> total solution time (c+ip+r+r) elapsed " << final_refine_time + running_time  << std::endl;
-			
-			std::cout << "log> initial numNodes " <<  qm.get_initial_numNodes() << std::endl;
+                        std::cout << "log> total final refine time elapsed " << final_refine_time  << std::endl;
+                        std::cout << "log> total solution time (c+ip+r+r) elapsed " << final_refine_time + running_time  << std::endl;
+                        std::cout << "log> initial numNodes " <<  qm.get_initial_numNodes() << std::endl;
                         std::cout << "log> initial numEdges " <<  qm.get_initial_numEdges() << std::endl;
                         std::cout << "log> initial edge cut  " <<  qm.get_initial_cut()  << std::endl; // comparing to adding network information
                         std::cout << "log> final edge cut " <<  edge_cut  << std::endl;
@@ -394,12 +376,12 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         std::cout << "log> avg dilation  " << qm.get_avg_dilation()  << std::endl;
                         std::cout << "log> final balance load "  <<  balance_load   << std::endl;
                         std::cout << "log> final balance load dist "  <<  balance_load_dist   << std::endl;
-				}
+                }
                 PRINT(qm.comm_vol( partition_config, in_G, communicator );)
-			PRINT(qm.comm_bnd( partition_config, in_G, communicator );)
-			PRINT(qm.comm_vol_dist( in_G, communicator );)
-			// qm.comm_vol(partition_config, G, communicator);
-			// qm.comm_vol_dist(G, communicator);
+                PRINT(qm.comm_bnd( partition_config, in_G, communicator );)
+                PRINT(qm.comm_vol_dist( in_G, communicator );)
+                // qm.comm_vol(partition_config, G, communicator);
+                // qm.comm_vol_dist(G, communicator);
 
 
 #ifndef NDEBUG
@@ -428,7 +410,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         }
                         parallel_vector_io pvio;
                         pvio.writePartitionSimpleParallel(in_G, filename);
-			pvio.writePartitionSimpleParallel(G, "G_partition.txtp");
+                        pvio.writePartitionSimpleParallel(G, "G_partition.txtp");
                 }
 
                 if( partition_config.save_partition_binary ) {
@@ -441,7 +423,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
                 if( rank == ROOT && (partition_config.save_partition || partition_config.save_partition_binary) ) {
                         std::cout << "wrote partition to " << filename << " ... " << std::endl;
-			std::cout << "wrote partition to G_partition.txtp ... " << std::endl;
+                        std::cout << "wrote partition to G_partition.txtp ... " << std::endl;
                 }
 
         }//if( communicator != MPI_COMM_NULL) 

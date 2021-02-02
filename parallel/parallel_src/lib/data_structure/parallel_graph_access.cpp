@@ -490,8 +490,7 @@ std::vector<NodeID> parallel_graph_access::get_high_degree_global_nodes_by_degre
     }else{
         local_high_degree_nodes = get_high_degree_local_nodes_by_degree(minDegree);
     }
-std::sort( local_high_degree_nodes.begin(), local_high_degree_nodes.end(), [&](NodeID i, NodeID j){ return getNodeDegree(getLocalID(i))>getNodeDegree(getLocalID(j)); } );
-std::cout << rank <<": affected nodes: highest degree " << getNodeDegree( getLocalID(local_high_degree_nodes[0]) ) << " lowest degree " << getNodeDegree( getLocalID(local_high_degree_nodes.back()) ) << std::endl;
+
     return get_all_global_nodes(local_high_degree_nodes);
 }
 
@@ -503,7 +502,7 @@ std::vector<NodeID> parallel_graph_access::get_high_degree_global_nodes_by_num(c
     }else{
         local_high_degree_nodes = get_high_degree_local_nodes_by_num(numNodes);
     }
-std::cout << rank <<": affected nodes: highest degree " << getNodeDegree( getLocalID(local_high_degree_nodes[0]) ) << " lowest degree " << getNodeDegree( getLocalID(local_high_degree_nodes.back()) ) << std::endl;
+
     return get_all_global_nodes(local_high_degree_nodes);
 
 }
