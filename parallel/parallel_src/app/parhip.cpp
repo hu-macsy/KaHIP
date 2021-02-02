@@ -119,12 +119,15 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
                     const NodeID numLocalNodes = 0.3*in_G.number_of_global_nodes()/size;
                     std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, true);
-
+		    // std::cout << "global_hdn : "; 
+		    // for(auto u : global_hdn)
+		    //   std::cout <<  u << " ";
+		    // std::cout << std::endl;
                     parallel_graph_access G(communicator);
 
 		if(global_hdn.empty()) {
 			
-		        in_G.get_graph_copy(G, communicator);
+		        in_G.copy_graph(G, communicator);
 			if (rank == ROOT) {
 				std::cout << "WARNING : Empty list of high degree nodes! " << std::endl;
 				std::cout << " ======================================== " << std::endl;
@@ -141,10 +144,10 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 			if( partition_config.aggressive_removal ) {
 				if (rank == ROOT)
 					std::cout << "log>  Enable aggressive removal of edges. " << std::endl;
-				in_G.get_reduced_graph(G, global_hdn, communicator, partition_config.aggressive_removal);
+				in_G.reduce_graph(G, global_hdn, communicator, partition_config.aggressive_removal);
 			}
 			else {
-				in_G.get_reduced_graph(G, global_hdn, communicator);
+				in_G.reduce_graph(G, global_hdn, communicator);
 			}
 			if (rank==ROOT){
 				std::cout << " ========================================= " << std::endl;

@@ -465,23 +465,22 @@ public:
 		
 	}
 
-	/** Create a copy of an input graph inG into outG. */
-	void get_graph_copy( parallel_graph_access & outG, MPI_Comm communicator );
+	/** Create a graph copy into a new graph H. */
+	void copy_graph( parallel_graph_access & H, MPI_Comm communicator );
 
-	/** Compute a reduced graph outG from inG by remove edges adjacent to nodes 
-	   in node_list (all but a couple of edges) */
-        void get_reduced_graph(parallel_graph_access & outG, std::vector< NodeID > node_list,
-			       MPI_Comm communicator, const bool aggressive_removal = false);
+	/** Compute a reduced graph H by removing edges adjacent to nodes in a node list */
+        void reduce_graph(parallel_graph_access & H, std::vector< NodeID > nodes,
+			  MPI_Comm communicator, const bool aggressive_removal = false);
 
-        void compute_reduced_adjacent_edges(std::vector<bool> is_high_degree_node ,
-					    std::vector< std::vector< NodeID > > &local_edge_lists,
-					    std::vector< std::vector< NodeID > > &local_edge_weights,
+        void reduce_edges(std::vector<bool> is_high_degree_node ,
+					    std::vector< std::vector< NodeID > > & edges,
+					    std::vector< std::vector< NodeID > > & weights,
 					    EdgeID & edge_counter );
   
-        void compute_reduced_adjacent_edges_aggressive(std::vector<bool> is_high_degree_node ,
-						      std::vector< std::vector< NodeID > > &local_edge_lists,
-						      std::vector< std::vector< NodeID > > &local_edge_weights,
-						      EdgeID & edge_counter );
+        void reduce_edges_aggressive(std::vector<bool> is_high_degree_node ,
+				     std::vector< std::vector< NodeID > > & edges,
+				     std::vector< std::vector< NodeID > > & weights,
+				     EdgeID & edge_counter );
   
   
         /** Return all local node IDs with degree > minDegree for the local nodes.
