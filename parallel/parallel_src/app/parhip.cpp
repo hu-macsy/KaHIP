@@ -120,14 +120,14 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                     const NodeID numLocalNodes = 0.2*in_G.number_of_global_nodes()/size;
                     std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, false);
 
-                	if (rank == ROOT) {
-                		std::cout << " Rank  = " << rank
-                			  << " global_hdn [ "  << std::endl;
-                		for (auto i = global_hdn.begin(); i != global_hdn.end(); ++i)
-                			std::cout << *i << ' ';
-                		std::cout  <<" ]"<< std::endl;
-                		
-                	}                    
+                	// if (rank == ROOT) {
+                	// 	std::cout << " Rank  = " << rank
+                	// 		  << " global_hdn [ "  << std::endl;
+                	// 	for (auto i = global_hdn.begin(); i != global_hdn.end(); ++i)
+                	// 		std::cout << *i << ' ';
+                	// 	std::cout  <<" ]"<< std::endl;                		
+                	// } 
+			
 
                     parallel_graph_access G(communicator);
 
@@ -153,8 +153,6 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 				in_G.get_reduced_graph(G, global_hdn, communicator, partition_config.aggressive_removal);
 			}
 			else {
-				if (rank == ROOT)
-					std::cout << "log>  No aggressive removal of edges. " << std::endl;
 				in_G.get_reduced_graph(G, global_hdn, communicator);
 			}
 			if (rank==ROOT){
@@ -171,11 +169,6 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
 		assert( G.number_of_local_edges() <= in_G.number_of_local_edges() );    //edges are less or equal
 
-		if(rank == ROOT) {
-		  std::cout << "printing reduced graph" << std::endl;
-		}
-		G.print_graph_local_no_balance();
-		G.print_graph_ghost_no_balance();
 		
 		double reducing_graph_time = t.elapsed(); // including finding high degree nodes // barrier in get_reduced, get_copy
 
@@ -267,11 +260,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 if( rank == ROOT ) std::cout<< __LINE__ << ", finished partitioning " << std::endl;
 getFreeRam(MPI_COMM_WORLD, myMem, true);
 
- if (rank == ROOT)
-   std::cout << "printing G" << std::endl;
- G.print_graph_local();
- MPI_Barrier(MPI_COMM_WORLD);
- 
+
 
         //partition_config.label_iterations = partition_config.label_iterations_refinement;
 		partition_config.label_iterations = 2; //temporary,hardwire to 2
