@@ -121,13 +121,13 @@ void parallel_graph_access::set_comm_rounds_up(ULONG comm_rounds) {
 
 
 
-void parallel_graph_access::compute_reduced_adjacent_edges_aggressive(std::vector<bool> is_high_degree_node ,
-								     std::vector< std::vector< NodeID > > &local_edge_lists,
-								     std::vector< std::vector< NodeID > > &local_edge_weights,
-								     EdgeID & edge_counter ) {
+void parallel_graph_access::reduce_edges_aggressive(std::vector<bool> is_high_degree_node ,
+						    std::vector< std::vector< NodeID > > & edges,
+						    std::vector< std::vector< NodeID > > & weights,
+						    EdgeID & edge_counter ) {
 	assert(is_high_degree_node.size() == (*this).number_of_global_nodes());
-	assert( local_edge_lists.size() == local_edge_weights.size() );
-	assert( local_edge_lists.size() == (*this).number_of_local_nodes()); 
+	assert( edges.size() == weights.size() );
+	assert( edges.size() == (*this).number_of_local_nodes()); 
 	ULONG numIsolatedHdnodes = 0;
 	ULONG numIsolatedNodes = 0;
 	
@@ -139,12 +139,12 @@ void parallel_graph_access::compute_reduced_adjacent_edges_aggressive(std::vecto
 				EdgeWeight weight = (*this).getEdgeWeight(e);
 				// add the first local node u --> v
 				if ((*this).is_local_node(v)) {
-					local_edge_lists[u].push_back((*this).getNodeLabel(v));
-					local_edge_weights[u].push_back(weight);
+					edges[u].push_back((*this).getNodeLabel(v));
+					weights[u].push_back(weight);
 					edge_counter++;
 					// add also the other direction v --> u
-					local_edge_lists[v].push_back((*this).getNodeLabel(u));
-					local_edge_weights[v].push_back(weight);
+					edges[v].push_back((*this).getNodeLabel(u));
+					weights[v].push_back(weight);
 					edge_counter++;
 					break;
 				} // if no local adjacent node exists, u stays isolated // highly possible
@@ -160,8 +160,8 @@ void parallel_graph_access::compute_reduced_adjacent_edges_aggressive(std::vecto
 				NodeID v = (*this).getEdgeTarget(e);
 				if (is_high_degree_node[(*this).getNodeLabel(v)] != true) {
 					EdgeWeight weight = (*this).getEdgeWeight(e);
-					local_edge_lists[u].push_back((*this).getNodeLabel(v));
-					local_edge_weights[u].push_back(weight);
+					edges[u].push_back((*this).getNodeLabel(v));
+					weights[u].push_back(weight);
 					edge_counter++;
 				}
 				else {
@@ -178,14 +178,14 @@ void parallel_graph_access::compute_reduced_adjacent_edges_aggressive(std::vecto
 	    
 }
 
-void parallel_graph_access::compute_reduced_adjacent_edges(std::vector<bool> is_high_degree_node ,
-							   std::vector< std::vector< NodeID > > &local_edge_lists,
-							   std::vector< std::vector< NodeID > > &local_edge_weights,
+void parallel_graph_access::reduce_edges(std::vector<bool> is_high_degree_node ,
+							   std::vector< std::vector< NodeID > > & edges,
+							   std::vector< std::vector< NodeID > > & weights,
 							   EdgeID &edge_counter) {
 
 	assert(is_high_degree_node.size() == (*this).number_of_global_nodes());
-	assert( local_edge_lists.size() == local_edge_weights.size());
-	assert( local_edge_lists.size() == (*this).number_of_local_nodes());
+	assert( edges.size() == weights.size());
+	assert( edges.size() == (*this).number_of_local_nodes());
 	ULONG numIsolatedHdnodes = 0;
 	// ULONG numIsolatedNodes = 0;
 	
@@ -199,8 +199,8 @@ void parallel_graph_access::compute_reduced_adjacent_edges(std::vector<bool> is_
 				EdgeWeight weight = (*this).getEdgeWeight(e);
 				// add edges to all non high degree nodes, v
 				if ( !is_high_degree_node[(*this).getNodeLabel(v)] ) {
-					local_edge_lists[u].push_back((*this).getNodeLabel(v));
-					local_edge_weights[u].push_back(weight);	      
+					edges[u].push_back((*this).getNodeLabel(v));
+					weights[u].push_back(weight);	      
 					edge_counter++;
 					edge_count_per_node++;
 				}
@@ -216,13 +216,13 @@ void parallel_graph_access::compute_reduced_adjacent_edges(std::vector<bool> is_
 					// connect u --> v (local node)
 					NodeID v = (*this).getEdgeTarget((EdgeID) first_local_edge);
 					EdgeWeight weight = (*this).getEdgeWeight((EdgeID) first_local_edge);
-					local_edge_lists[u].push_back((*this).getNodeLabel(v));
-					local_edge_weights[u].push_back(weight);              
+					edges[u].push_back((*this).getNodeLabel(v));
+					weights[u].push_back(weight);              
 					edge_counter++;
 					// connect also v --> u
 					NodeID w = (*this).getNodeLabel(u);
-					local_edge_lists[v].push_back(w);
-					local_edge_weights[v].push_back(weight);              
+					edges[v].push_back(w);
+					weights[v].push_back(weight);              
 					edge_counter++;
 				}
 				// there is not a local neighboring node -- weird behaviour
@@ -238,8 +238,8 @@ void parallel_graph_access::compute_reduced_adjacent_edges(std::vector<bool> is_
 			forall_out_edges((*this), e, u) {
 				NodeID v = (*this).getEdgeTarget(e);
 				EdgeWeight weight = (*this).getEdgeWeight(e);
-				local_edge_lists[u].push_back((*this).getNodeLabel(v));
-				local_edge_weights[u].push_back(weight);
+				edges[u].push_back((*this).getNodeLabel(v));
+				weights[u].push_back(weight);
 				edge_counter++;					
 			} endfor
 	        }
@@ -252,7 +252,7 @@ void parallel_graph_access::compute_reduced_adjacent_edges(std::vector<bool> is_
 
 }
 
-void parallel_graph_access::get_reduced_graph(parallel_graph_access & outG, std::vector< NodeID > node_list, MPI_Comm communicator,
+void parallel_graph_access::reduce_graph(parallel_graph_access & outG, std::vector< NodeID > node_list, MPI_Comm communicator,
 					      const bool aggressive_removal) {
 	assert(!node_list.empty());
 	int rank, comm_size;
@@ -272,18 +272,16 @@ void parallel_graph_access::get_reduced_graph(parallel_graph_access & outG, std:
 	to = std::min<unsigned long>(to, n-1);
 	  
 	  
-	std::vector< std::vector< NodeID > > local_edge_lists;
-	local_edge_lists.resize(local_nnodes);
-	std::vector< std::vector< NodeID > > local_edge_weights;
-	local_edge_weights.resize(local_nnodes);
+	std::vector< std::vector< NodeID > > edges;
+	edges.resize(local_nnodes);
+	std::vector< std::vector< NodeID > > weights;
+	weights.resize(local_nnodes);
 	EdgeID edge_counter = 0;
 	
 	if (aggressive_removal)
-		(*this).compute_reduced_adjacent_edges_aggressive(is_high_degree_node,local_edge_lists,
-								 local_edge_weights, edge_counter);
+		(*this).reduce_edges_aggressive(is_high_degree_node, edges, weights, edge_counter);
 	else
-		(*this).compute_reduced_adjacent_edges(is_high_degree_node,local_edge_lists,
-						       local_edge_weights, edge_counter);
+		(*this).reduce_edges(is_high_degree_node,edges, weights, edge_counter);
 
 		  
 	int t_edge_count = 0;
@@ -306,10 +304,10 @@ void parallel_graph_access::get_reduced_graph(parallel_graph_access & outG, std:
 		outG.setNodeWeight(node, 1);
 		outG.setNodeLabel(node, from+node);
 		outG.setSecondPartitionIndex(node, 0);
-		for( ULONG j = 0; j < local_edge_lists[i].size(); j++) {
-			NodeID target = local_edge_lists[i][j];
+		for( ULONG j = 0; j < edges[i].size(); j++) {
+			NodeID target = edges[i][j];
 			EdgeID e = outG.new_edge(node, target);
-			EdgeWeight weight = local_edge_weights[i][j];
+			EdgeWeight weight = weights[i][j];
 			outG.setEdgeWeight(e, weight);
 		}		
 	}
@@ -320,7 +318,7 @@ void parallel_graph_access::get_reduced_graph(parallel_graph_access & outG, std:
 }
   
 
-void parallel_graph_access::get_graph_copy(parallel_graph_access & outG, MPI_Comm communicator) {
+void parallel_graph_access::copy_graph(parallel_graph_access & outG, MPI_Comm communicator) {
 
 	int rank, comm_size;
 	MPI_Comm_rank( communicator, &rank);
