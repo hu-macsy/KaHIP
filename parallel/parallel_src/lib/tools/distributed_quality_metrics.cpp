@@ -144,6 +144,7 @@ double distributed_quality_metrics::balance( PPartitionConfig & config, parallel
         forall_local_nodes(G, n) {
                 PartitionID curPartition     = G.getNodeLabel(n);
                 block_weights[curPartition] += G.getNodeWeight(n);
+		std::cout << "block_weight of part " << curPartition << " = " << block_weights[curPartition] << std::endl;
                 local_graph_vertex_weight   += G.getNodeWeight(n);
         } endfor
 

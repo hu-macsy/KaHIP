@@ -266,13 +266,14 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
         //partition_config.label_iterations = partition_config.label_iterations_refinement;
 		partition_config.label_iterations = 2; //temporary,hardwire to 2
 
-		EdgeWeight inter_ref_edge_cut = 0;
+	        EdgeWeight inter_ref_edge_cut = 0;
+	        double inter_ref_balance = 0;
 		
 		if( partition_config.label_iterations != 0 ) {
 			partition_config.total_num_labels = partition_config.k;
 			partition_config.upper_bound_cluster = partition_config.upper_bound_partition;
 			const EdgeWeight edge_cut = qm.edge_cut( G, communicator );
-			const EdgeWeight balance = qm.balance( partition_config, G, communicator );
+			const double balance = qm.balance( partition_config, G, communicator );
 
 			if ( rank == ROOT ) {
 				std::cout << " log> config.label_iterations = " << partition_config.label_iterations << std::endl; 
@@ -304,6 +305,9 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 			if (rank == ROOT)
 			  std::cout << "printing in_G diff init balance manage" << std::endl;
 			in_G.print_graph_local();
+                        parallel_vector_io pvio;
+			pvio.writePartitionSimpleParallel(in_G, "inG_inter_partition.txtp");
+			
 
 			forall_ghost_nodes(in_G, node) {
 				//in_G.setSecondPartitionIndex(node, in_G.getNodeLabel(node));
@@ -319,6 +323,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 
 			inter_ref_edge_cut = qm.edge_cut( in_G, communicator );
+			inter_ref_balance = qm.balance( partition_config, in_G, communicator );
 
 			PPartitionConfig working_config = partition_config;
 			working_config.vcycle = false; // assure that we actually can improve the cut
@@ -350,20 +355,22 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 if (partition_config.integrated_mapping)
                     qap_no_final_ref = qm_no_final_ref.total_qap( G, PEtree, communicator );
 
-                EdgeWeight balance_no_final_ref  = qm_no_final_ref.balance( partition_config, G, communicator );
+                double balance_no_final_ref  = qm_no_final_ref.balance( partition_config, G, communicator );
                 if (!global_hdn.empty()) {
                     if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut_no_final_ref << " < " << edge_cut << std::endl; // in_G has more edges, thus a higher cut
-                    if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance_no_final_ref << std::endl; // not currently true because balance = false in plc
+		    
+		    if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  "inter_ref_balance = " << inter_ref_balance << std::endl;
+                    if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance_no_final_ref << std::endl; // currently true because balance = false in plc
 		    if( rank == ROOT ) {
 			    if (inter_ref_edge_cut  <= edge_cut )
 				    std::cout<< __LINE__ << ", WARNING: last refinement step did not improve edgecut: (" << inter_ref_edge_cut << " <= " << edge_cut  << ")" << std::endl;
 		    }
                 }else {
-                    if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut_no_final_ref << " = " << edge_cut << std::endl; // in_G has more edges, thus a higher cut
-                    if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance_no_final_ref << std::endl; // not currently true because balance = false in plc
-                    if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  qap << " = " << qap_no_final_ref << std::endl; // not currently true because balance = false in plc
+                    if( rank == ROOT ) std::cout<< __LINE__ << ", " << edge_cut_no_final_ref << " = " << edge_cut << std::endl; 
+		    if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  balance << " = " << balance_no_final_ref << std::endl; 
+                    if( rank == ROOT ) std::cout<< __LINE__ << ", " <<  qap << " = " << qap_no_final_ref << std::endl; 
                     assert(edge_cut_no_final_ref == edge_cut);
-//assert(balance_no_final_ref == balance);
+		    assert(balance_no_final_ref == balance);
                     assert(qap_no_final_ref == qap);
                 }
 
@@ -427,6 +434,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         }
                         parallel_vector_io pvio;
                         pvio.writePartitionSimpleParallel(in_G, filename);
+			pvio.writePartitionSimpleParallel(G, "G_partition.txtp");
                 }
 
                 if( partition_config.save_partition_binary ) {
@@ -439,6 +447,8 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
                 if( rank == ROOT && (partition_config.save_partition || partition_config.save_partition_binary) ) {
                         std::cout << "wrote partition to " << filename << " ... " << std::endl;
+			std::cout << "wrote partition to G_partition.txtp ... " << std::endl;
+			std::cout << "wrote partition to inG_inter_partition.txtp ... " << std::endl;
                 }
 
         }//if( communicator != MPI_COMM_NULL) 
