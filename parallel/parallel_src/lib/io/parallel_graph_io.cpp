@@ -560,9 +560,9 @@ int parallel_graph_io::readGraphBinary(PPartitionConfig & config, parallel_graph
         MPI_Bcast(&success, 1, MPI_INT, ROOT, communicator);
 
         if( !success ) {
-                if( peID == ROOT ) std::cout <<  "problem to open the file"  << std::endl;
+                if( peID == ROOT ) std::cout <<  "problem to open the file " << filename  << std::endl;
                 MPI_Finalize();
-                exit(0);
+                throw std::runtime_error( "problem to open the file " + filename );
         }
 
         MPI_Bcast(&buffer[0], 3, MPI_LONG, ROOT, communicator);
