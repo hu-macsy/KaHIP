@@ -98,7 +98,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 }
                 if( in_G.number_of_global_nodes()==0 ){
                     MPI_Finalize();
-                    throw std::runtime_erro("Input graph has no nodes! corrupted file or error while reading file "+graph_filename);
+                    throw std::runtime_error("Input graph has no nodes! corrupted file or error while reading file "+graph_filename);
                 }
 if( rank == ROOT ) std::cout<< __LINE__ << ", read graph " << std::endl;
 getFreeRam(MPI_COMM_WORLD, myMem, true);
