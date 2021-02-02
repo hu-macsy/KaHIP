@@ -230,7 +230,8 @@ void parallel_graph_access::compute_reduced_adjacent_edges(std::vector<bool> is_
 
 }
 
-void parallel_graph_access::get_reduced_graph(parallel_graph_access & outG, std::vector< NodeID > node_list, MPI_Comm communicator) {
+void parallel_graph_access::get_reduced_graph(parallel_graph_access & outG, std::vector< NodeID > node_list, MPI_Comm communicator,
+					      const bool aggressive_removal) {
 	assert(!node_list.empty());
 	int rank, comm_size;
 	MPI_Comm_rank( communicator, &rank);
@@ -238,8 +239,6 @@ void parallel_graph_access::get_reduced_graph(parallel_graph_access & outG, std:
 	NodeID global_nnodes = (*this).number_of_global_nodes();
 	NodeID local_nnodes = (*this).number_of_local_nodes();
 
-	// TODO: input parameter
-	bool aggressive = true;
 		
 	std::vector<bool> is_high_degree_node(global_nnodes, false);
 	for(auto& u : node_list)
@@ -257,12 +256,9 @@ void parallel_graph_access::get_reduced_graph(parallel_graph_access & outG, std:
 	local_edge_weights.resize(local_nnodes);
 	EdgeID edge_counter = 0;
 	
-	if (aggressive) {
-		if (rank == ROOT)
-			std::cout << "log> trying out the aggressive reduce of edges. " << std::endl;
+	if (aggressive_removal)
 		(*this).compute_reduced_adjacent_edges_aggressive(is_high_degree_node,local_edge_lists,
 								 local_edge_weights, edge_counter);
-	}
 	else
 		(*this).compute_reduced_adjacent_edges(is_high_degree_node,local_edge_lists,
 						       local_edge_weights, edge_counter);

@@ -132,7 +132,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                     parallel_graph_access G(communicator);
 
 		if(global_hdn.empty()) {
-			// TODO: find more elegant way to do it.
+			
 		        in_G.get_graph_copy(G, communicator);
 			if (rank == ROOT) {
 				std::cout << "WARNING : Empty list of high degree nodes! " << std::endl;
@@ -146,7 +146,17 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 		    
 			}
 		} else {
-			in_G.get_reduced_graph(G, global_hdn, communicator);
+			// reducing graph
+			if( partition_config.aggressive_removal ) {
+				if (rank == ROOT)
+					std::cout << "log>  Enable aggressive removal of edges. " << std::endl;
+				in_G.get_reduced_graph(G, global_hdn, communicator, partition_config.aggressive_removal);
+			}
+			else {
+				if (rank == ROOT)
+					std::cout << "log>  No aggressive removal of edges. " << std::endl;
+				in_G.get_reduced_graph(G, global_hdn, communicator);
+			}
 			if (rank==ROOT){
 				std::cout << " ========================================= " << std::endl;
 				std::cout << " ============  Reducing graph  =========== " <<  std::endl;
@@ -302,11 +312,6 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 			    
 				  partition_config.total_num_labels = partition_config.k; //forces refinement balance
 			in_G.init_balance_management( partition_config );
-			if (rank == ROOT)
-			  std::cout << "printing in_G diff init balance manage" << std::endl;
-			in_G.print_graph_local();
-                        parallel_vector_io pvio;
-			pvio.writePartitionSimpleParallel(in_G, "inG_inter_partition.txtp");
 			
 
 			forall_ghost_nodes(in_G, node) {
@@ -448,7 +453,6 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 if( rank == ROOT && (partition_config.save_partition || partition_config.save_partition_binary) ) {
                         std::cout << "wrote partition to " << filename << " ... " << std::endl;
 			std::cout << "wrote partition to G_partition.txtp ... " << std::endl;
-			std::cout << "wrote partition to inG_inter_partition.txtp ... " << std::endl;
                 }
 
         }//if( communicator != MPI_COMM_NULL) 
