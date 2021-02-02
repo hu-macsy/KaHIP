@@ -117,8 +117,8 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                     if( rank == ROOT ) std::cout<<"log> max degree " << global_max_degree << " average degree " << avg_degree << std::endl;
                     //std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_degree( avg_degree*1.5 , false);
 
-                    const NodeID numLocalNodes = 0.3*in_G.number_of_global_nodes()/size;
-                    std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, false);
+                    const NodeID numLocalNodes = 0.2*in_G.number_of_global_nodes()/size;
+                    std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, true);
 /*
                 	if (rank == ROOT) {
                 		std::cout << " Rank  = " << rank
@@ -292,10 +292,17 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
             //partition_config.total_num_labels = partition_config.k; //forces refinement balance
             //in_G.init_balance_management( partition_config );
 
+std::cout << __LINE__ << ", "<< rank <<": G num_local " << G.number_of_local_nodes() << " in_G num_local " << in_G.number_of_local_nodes() << std::endl; 
+std::cout << __LINE__ << ", "<< rank <<": G num_ghost " << G.number_of_ghost_nodes() << " in_G num_ghost " << in_G.number_of_ghost_nodes() << std::endl;
+std::cout << __LINE__ << ", "<< rank <<": G num_local_edges " << G.number_of_local_edges() << " in_G num_local_edges " << in_G.number_of_local_edges() << std::endl;
+
+/*
 			forall_ghost_nodes(in_G, node) {
 				//in_G.setSecondPartitionIndex(node, in_G.getNodeLabel(node));
 				//in_G.setNodeLabel(node, in_G.getGlobalID(node));
-				NodeID label = in_G.getNodeLabel(node); // label is a global node in G
+if( rank == ROOT ) std::cout<< __LINE__ << ", " << node << " __ " << G.getLocalID(node) << " oo " << G.getGlobalID(node)<< std::endl; // in_G has more edges, thus a higher cut
+
+				const NodeID globalI = in_G.getNodeLabel(node); // label is a global node in G
 				NodeID original_local_node = G.getLocalID(label);
 				NodeID original_node_label = G.getNodeLabel(original_local_node);
 				in_G.setNodeLabel(node, original_node_label);
@@ -303,6 +310,17 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 				in_G.setSecondPartitionIndex(node, sp);
 				
             } endfor
+*/
+
+            {   //do we need this? remove it?
+                distributed_quality_metrics qm_tmp;
+                EdgeWeight edge_cut = qm_tmp.edge_cut( in_G, communicator );
+                if( rank == ROOT ) std::cout << "log> edge cut before ghost update " << edge_cut << std::endl;
+            }
+
+in_G.update_ghost_node_data();
+in_G.update_ghost_node_data_global();
+in_G.update_ghost_node_data_finish();
 
             {   //do we need this? remove it?
                 distributed_quality_metrics qm_tmp;
