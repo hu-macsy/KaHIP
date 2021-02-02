@@ -112,12 +112,12 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
                     // copy or reduce graph. This is meant to reduce the memory consumption for certain complex graphs
                     t.restart();
-                   // const NodeID global_max_degree = in_G.get_global_max_degree(communicator);
-                    //const double avg_degree = in_G.number_of_global_edges()/ (double) in_G.number_of_global_nodes();
-                    //if( rank == ROOT ) std::cout<<"log> max degree " << global_max_degree << " average degree " << avg_degree << std::endl;
+                    const NodeID global_max_degree = in_G.get_global_max_degree(communicator);
+                    const double avg_degree = in_G.number_of_global_edges()/ (double) in_G.number_of_global_nodes();
+                    if( rank == ROOT ) std::cout<<"log> max degree " << global_max_degree << " average degree " << avg_degree << std::endl;
                     //std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_degree( avg_degree*1.5 , false);
-                    
-                    const NodeID numLocalNodes = 0.2*in_G.number_of_global_nodes()/size;
+
+                    const NodeID numLocalNodes = 0.3*in_G.number_of_global_nodes()/size;
                     std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, false);
 
                 	// if (rank == ROOT) {
@@ -159,7 +159,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 				std::cout << " ========================================= " << std::endl;
 				std::cout << " ============  Reducing graph  =========== " <<  std::endl;
 				std::cout << " ========================================= " << std::endl;
-				std::cout << "log> number of affected nodes " << global_hdn.size() << ", on each PEs " << numLocalNodes << std::endl;
+				std::cout << "log> number of affected nodes " << global_hdn.size() << ", on each PE " << numLocalNodes << std::endl;
 				std::cout << "log> reduced graph number of nodes "
 					  << G.number_of_global_nodes() << " number of edges "
 					  << G.number_of_global_edges() << std::endl;
