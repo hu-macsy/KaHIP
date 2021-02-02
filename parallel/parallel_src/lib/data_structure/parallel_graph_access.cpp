@@ -128,7 +128,9 @@ void parallel_graph_access::compute_reduced_adjacent_edges_aggressive(std::vecto
 	assert(is_high_degree_node.size() == (*this).number_of_global_nodes());
 	assert( local_edge_lists.size() == local_edge_weights.size() );
 	assert( local_edge_lists.size() == (*this).number_of_local_nodes()); 
-
+	ULONG numIsolatedHdnodes = 0;
+	ULONG numIsolatedNodes = 0;
+	
 	forall_local_nodes((*this),u) {
 		if (is_high_degree_node[(*this).getNodeLabel(u)] == true) {
 			// for high degree nodes
@@ -146,10 +148,13 @@ void parallel_graph_access::compute_reduced_adjacent_edges_aggressive(std::vecto
 					edge_counter++;
 					break;
 				} // if no local adjacent node exists, u stays isolated // highly possible
-				else std::cout << "WARNING: high degree node is added as an isolated node!" << std::endl; 
+				else {
+		        	  numIsolatedHdnodes++;
+		        	}
+			
 			} endfor
 
-				  }
+			    }
 		else {
 			forall_out_edges((*this), e, u) {
 				NodeID v = (*this).getEdgeTarget(e);
@@ -159,10 +164,18 @@ void parallel_graph_access::compute_reduced_adjacent_edges_aggressive(std::vecto
 					local_edge_weights[u].push_back(weight);
 					edge_counter++;
 				}
-				else std::cout << "WARNING:  node is added as an isolated node!" << std::endl;
+				else {
+		        	  numIsolatedNodes++;
+		        	}
+				
 			} endfor
 				  }
 	} endfor
+
+	    if(numIsolatedHdnodes > 0 || numIsolatedNodes > 0){
+	      std::cout << "WARNING, rank " << rank << " now has isolated " << numIsolatedHdnodes << " (high degree) nodes and " << numIsolatedNodes  << " normal nodes. " <<  std::endl; 
+	    }
+	    
 }
 
 void parallel_graph_access::compute_reduced_adjacent_edges(std::vector<bool> is_high_degree_node ,
@@ -173,7 +186,8 @@ void parallel_graph_access::compute_reduced_adjacent_edges(std::vector<bool> is_
 	assert(is_high_degree_node.size() == (*this).number_of_global_nodes());
 	assert( local_edge_lists.size() == local_edge_weights.size());
 	assert( local_edge_lists.size() == (*this).number_of_local_nodes());
-	ULONG numIsolatedNodes = 0;
+	ULONG numIsolatedHdnodes = 0;
+	// ULONG numIsolatedNodes = 0;
 	
 	forall_local_nodes((*this),u) {
 		if (is_high_degree_node[(*this).getNodeLabel(u)] == true) {
@@ -213,8 +227,7 @@ void parallel_graph_access::compute_reduced_adjacent_edges(std::vector<bool> is_
 				}
 				// there is not a local neighboring node -- weird behaviour
 				else{
-				  //std::cout << "WARNING: high degree node is added as an isolated node!" << std::endl; 
-				  numIsolatedNodes++;
+				  numIsolatedHdnodes++;
 				} 
 				
 			}
@@ -232,8 +245,8 @@ void parallel_graph_access::compute_reduced_adjacent_edges(std::vector<bool> is_
 	        }
 	} endfor
 
-	    if(numIsolatedNodes>0){
-	      std::cout << "WARNING, rank " << rank << " now has " << numIsolatedNodes <<" isolated nodes " <<  std::endl; 
+	    if(numIsolatedHdnodes > 0){
+	      std::cout << "WARNING, rank " << rank << " now has " << numIsolatedHdnodes << " isolated (high degree) nodes " <<  std::endl; 
 	    }
 
 
