@@ -68,7 +68,10 @@ int parse_parameters(int argn, char **argv,
         struct arg_lit *ignore_PEtree                        = arg_lit0(NULL, "ignore_PEtree", "Even if the PE tree is given, ignore it during refinement; used to measure the qap metrics when a PE tree exists but it is ignored" );
         struct arg_int *update_step_size                     = arg_int0(NULL, "update_step_size", NULL, "Every how many nodes to update ghost nodes.");
         struct arg_lit *adjustable_update_step               = arg_lit0(NULL, "adjustable_update_step", "When coarsening/refining,  automatically adjust the update step" );
-	struct arg_lit *aggressive_removal		     = arg_lit0(NULL, "aggressive_removal","Enable aggressive removal of edges that will be reintroduced (to manage memory issues).");
+        struct arg_lit *aggressive_removal                   = arg_lit0(NULL, "aggressive_removal","Enable aggressive removal of edges that will be reintroduced (to manage memory issues).");
+        struct arg_dbl *hdn_percent                          = arg_dbl0(NULL, "hdn_percent", NULL, "High degree nodes percentage (from global nodes) to remove edges from. Value range 0<= x < 1. Default is 0.2.");
+        struct arg_lit *use_ghost_degree                     = arg_lit0(NULL, "use_ghost_degree", "Used when picking high degree nodes to remove edges. If false, we use the normal degree of a node. If true, we pick nodes based on their ghost-degree, i.e. the number of ghost neighbors they have.");
+
         // Define argtable.
         void* argtable[] = {
 #ifdef PARALLEL_LABEL_COMPRESSION
@@ -76,7 +79,7 @@ int parse_parameters(int argn, char **argv,
 	  save_partition, save_partition_binary, hierarchy_parameter_string, distance_parameter_string, aggressive_removal,
 	  only_boundary, num_vcycles, label_iterations_refinement, label_iterations_coarsening, stop_factor,
 	  no_refinement_in_last_iteration, cluster_coarsening_factor, max_coarsening_levels, ignore_PEtree, 
-	  update_step_size, adjustable_update_step,
+	  update_step_size, adjustable_update_step, hdn_percent, use_ghost_degree,
 #elif defined TOOLBOX 
                 help, filename, k_opt, input_partition_filename, save_partition, save_partition_binary, converter_evaluate,
 #endif 
@@ -199,6 +202,10 @@ int parse_parameters(int argn, char **argv,
 	if(save_partition_binary->count > 0) {
 		partition_config.save_partition_binary = true;
 	}
+
+        if(hdn_percent->count > 0) {
+                partition_config.hdn_percent = hdn_percent->dval[0];
+        }
 
         if(n->count > 0) {
                 partition_config.n = pow(10,n->ival[0]);
@@ -370,7 +377,11 @@ int parse_parameters(int argn, char **argv,
 	if(aggressive_removal->count > 0) {
 	  partition_config.aggressive_removal = true;
 	}
-	
+    
+        if(use_ghost_degree->count > 0) {
+            partition_config.use_ghost_degree = true;
+        }
+
 //next lines appear in main() at the SEA_mapping code; not sure if (and why) we need them
 //see for example SEA_mapping/app/fastmesh.cpp
 /*

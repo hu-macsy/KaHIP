@@ -117,8 +117,8 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                     if( rank == ROOT ) std::cout<<"log> max degree " << global_max_degree << " average degree " << avg_degree << std::endl;
                     //std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_degree( avg_degree*1.5 , false);
 
-                    const NodeID numLocalNodes = 0.3*in_G.number_of_global_nodes()/size;
-                    std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, true);
+                    const NodeID numLocalNodes = partition_config.hdn_percent*in_G.number_of_global_nodes()/size;
+                    std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, partition_config.use_ghost_degree );
 
                     parallel_graph_access G(communicator);
 
@@ -293,7 +293,6 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 in_G.update_ghost_node_data();
                 in_G.update_ghost_node_data_global();
                 in_G.update_ghost_node_data_finish();
-
 
                 inter_ref_edge_cut = qm.edge_cut( in_G, communicator );
                 inter_ref_balance = qm.balance( partition_config, in_G, communicator );

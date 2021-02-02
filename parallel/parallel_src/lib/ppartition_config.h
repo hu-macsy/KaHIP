@@ -150,6 +150,8 @@ struct PPartitionConfig
         double coarsening_factor = 3; //should be greater than 2
         int update_step_size = 1;
         bool adjustable_update_step = false;
+        double hdn_percent = 0.2;
+        bool use_ghost_degree = false;
 
         //=======================================
         //======= Binary Online Distance ========
