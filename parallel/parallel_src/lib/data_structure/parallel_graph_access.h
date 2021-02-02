@@ -472,6 +472,17 @@ public:
 	   in node_list (all but a couple of edges) */
 	void get_reduced_graph(parallel_graph_access & outG, std::vector< NodeID > node_list,
 			        MPI_Comm communicator );
+
+        void compute_reduced_adjacent_edges(std::vector<bool> is_high_degree_node ,
+					    std::vector< std::vector< NodeID > > &local_edge_lists,
+					    std::vector< std::vector< NodeID > > &local_edge_weights,
+					    EdgeID & edge_counter );
+  
+        void compute_reduced_adjacent_edges_aggressive(std::vector<bool> is_high_degree_node ,
+						      std::vector< std::vector< NodeID > > &local_edge_lists,
+						      std::vector< std::vector< NodeID > > &local_edge_weights,
+						      EdgeID & edge_counter );
+  
   
         /** Return all local node IDs with degree > minDegree for the local nodes.
         */
