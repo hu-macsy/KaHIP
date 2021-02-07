@@ -131,6 +131,7 @@ void parallel_graph_access::reduce_edges_aggressive(std::vector<bool> is_high_de
 	ULONG numIsolatedHdnodes = 0;
 	ULONG numIsolatedNodes = 0;
 	
+    //TODO: idea, what if try to keep all local edges?
 	forall_local_nodes((*this),u) {
 		if (is_high_degree_node[(*this).getNodeLabel(u)] == true) {
 			// for high degree nodes
@@ -139,7 +140,7 @@ void parallel_graph_access::reduce_edges_aggressive(std::vector<bool> is_high_de
 				EdgeWeight weight = (*this).getEdgeWeight(e);
 				// add the first local node u --> v
 				if ((*this).is_local_node(v)) {
-					edges[u].push_back((*this).getNodeLabel(v));
+					edges[u].push_back((*this).getNodeLabel(v));       //TODO: I think more correct is to use getGlobalID(v)
 					weights[u].push_back(weight);
 					edge_counter++;
 					// add also the other direction v --> u
@@ -149,6 +150,9 @@ void parallel_graph_access::reduce_edges_aggressive(std::vector<bool> is_high_de
 					break;
 				} // if no local adjacent node exists, u stays isolated // highly possible
 				else {
+                    //TODO: this is increased for  all non-local neighbors of u, not once per node. Is this intended?
+                    //   This is like counting edges of isolated nodes, not the nodes themselves. Also below
+                    //   This will also be increased if node is not isolated, e.g. the second neighbor is not local
 		        	  numIsolatedHdnodes++;
 		        	}
 			
@@ -163,6 +167,7 @@ void parallel_graph_access::reduce_edges_aggressive(std::vector<bool> is_high_de
 					edges[u].push_back((*this).getNodeLabel(v));
 					weights[u].push_back(weight);
 					edge_counter++;
+                    //TODO: above we also add the other direction, is this also needed here?
 				}
 				else {
 		        	  numIsolatedNodes++;
@@ -261,16 +266,17 @@ void parallel_graph_access::reduce_graph(parallel_graph_access & outG, std::vect
 	NodeID global_nnodes = (*this).number_of_global_nodes();
 	NodeID local_nnodes = (*this).number_of_local_nodes();
 
-		
+	//TODO: this probably uses too much memory, we can have a vector of size local_n and use the mapping from localIDs to globalOS
+    //since node_list stores global IDs
 	std::vector<bool> is_high_degree_node(global_nnodes, false);
 	for(auto& u : node_list)
 		is_high_degree_node[u] = true;
 		
+    //TODO: use function get_from_range() get_to_range()?
 	NodeID n = global_nnodes;
 	ULONG from  = rank     * ceil(n / (double)comm_size);
 	ULONG to    = (rank+1) * ceil(n / (double)comm_size) - 1;
 	to = std::min<unsigned long>(to, n-1);
-	  
 	  
 	std::vector< std::vector< NodeID > > edges;
 	edges.resize(local_nnodes);
@@ -290,19 +296,16 @@ void parallel_graph_access::reduce_graph(parallel_graph_access & outG, std::vect
 	outG.start_construction(local_nnodes, edge_counter*2, global_nnodes, t_edge_count);
 	outG.set_range(from, to);
 	
-		
 	std::vector< NodeID > vertex_dist( comm_size+1, 0 );
 	for( PEID peID = 0; peID <= comm_size; peID++) {
 		vertex_dist[peID] = peID * ceil(n / (double)comm_size); // from positions
 	}
 	outG.set_range_array(vertex_dist);
 	
-	
-	
 	for (NodeID i = 0; i < local_nnodes; ++i) {
 		NodeID node = outG.new_node();
-		outG.setNodeWeight(node, 1);
-		outG.setNodeLabel(node, from+node);
+		outG.setNodeWeight(node, 1);          //TODO: if this has node weights we need to copy the node weight
+		outG.setNodeLabel(node, from+node);   //TODO: not clear what the label should be; now is the globalID
 		outG.setSecondPartitionIndex(node, 0);
 		for( ULONG j = 0; j < edges[i].size(); j++) {
 			NodeID target = edges[i][j];
@@ -311,7 +314,6 @@ void parallel_graph_access::reduce_graph(parallel_graph_access & outG, std::vect
 			outG.setEdgeWeight(e, weight);
 		}		
 	}
-    	
 	
 	outG.finish_construction(); 
 	MPI_Barrier(communicator);
