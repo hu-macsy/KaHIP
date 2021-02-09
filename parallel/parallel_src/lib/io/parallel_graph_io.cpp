@@ -70,10 +70,11 @@ int parallel_graph_io::readGraphWeightedFlexible(parallel_graph_access & G,
         // open file for reading
         std::ifstream in(filename.c_str());
         if (!in) {
-                std::cerr << "Error opening " << filename << std::endl;
-                return 1;
+                std::cerr <<"rank " << peID << ": problem opening file " << filename  << std::endl;
+                std::cout <<"rank " << peID << ": problem opening file " << filename  << std::endl;
+                MPI_Finalize();
+                throw std::runtime_error( "problem opening file " + filename );
         }
-
         NodeID nmbNodes;
         EdgeID nmbEdges;
 
@@ -560,9 +561,9 @@ int parallel_graph_io::readGraphBinary(PPartitionConfig & config, parallel_graph
         MPI_Bcast(&success, 1, MPI_INT, ROOT, communicator);
 
         if( !success ) {
-                if( peID == ROOT ) std::cout <<  "problem to open the file " << filename  << std::endl;
+                std::cout <<"rank " << peID << ": problem opening file " << filename  << std::endl;
                 MPI_Finalize();
-                throw std::runtime_error( "problem to open the file " + filename );
+                throw std::runtime_error( "problem opening file " + filename );
         }
 
         MPI_Bcast(&buffer[0], 3, MPI_LONG, ROOT, communicator);

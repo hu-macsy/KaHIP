@@ -472,12 +472,12 @@ public:
         void reduce_graph(parallel_graph_access & H, std::vector< NodeID > nodes,
 			  MPI_Comm communicator, const bool aggressive_removal = false);
 
-        void reduce_edges(std::vector<bool> is_high_degree_node ,
+        void reduce_edges(std::unordered_map<NodeID,bool> is_high_degree_node ,
 					    std::vector< std::vector< NodeID > > & edges,
 					    std::vector< std::vector< NodeID > > & weights,
 					    EdgeID & edge_counter );
   
-        void reduce_edges_aggressive(std::vector<bool> is_high_degree_node ,
+        void reduce_edges_aggressive(std::unordered_map<NodeID,bool> is_high_degree_node ,
 				     std::vector< std::vector< NodeID > > & edges,
 				     std::vector< std::vector< NodeID > > & weights,
 				     EdgeID & edge_counter );
