@@ -122,7 +122,8 @@ void parallel_graph_access::set_comm_rounds_up(ULONG comm_rounds) {
 
 
 void parallel_graph_access::reduce_edges_aggressive(
-    std::unordered_map<NodeID,bool> is_high_degree_node ,
+    //std::set<NodeID> is_high_degree_node ,
+    const std::unordered_map<NodeID,bool>& is_high_degree_node,
 						    std::vector< std::vector< NodeID > > & edges,
 						    std::vector< std::vector< NodeID > > & weights,
 						    EdgeID & edge_counter ) {
@@ -131,24 +132,36 @@ void parallel_graph_access::reduce_edges_aggressive(
 	assert( edges.size() == (*this).number_of_local_nodes()); 
 	ULONG numIsolatedHdnodes = 0;
 	ULONG numIsolatedNodes = 0;
-	
+
+    auto existsInMap =[&]( const NodeID vertex ){
+        try{ 
+            is_high_degree_node.at(vertex);
+            return true;
+        }catch( const std::out_of_range& oor ){
+            return false;
+        }
+        return true;
+    };
+
     //TODO: idea, what if we try to keep all local edges?
 	forall_local_nodes((*this),u) {
-		if (is_high_degree_node[(*this).getGlobalID(u)] == true) {
+        if ( existsInMap(getGlobalID(u)) ) {
 			// for high degree nodes
 			forall_out_edges((*this), e, u) {
 				NodeID v = (*this).getEdgeTarget(e);
 				EdgeWeight weight = (*this).getEdgeWeight(e);
 				// add the first local node u --> v
 				if ((*this).is_local_node(v)) {
-					edges[u].push_back((*this).getGlobalID(v));       //TODO: I think more correct is to use getGlobalID(v)
+					edges[u].push_back((*this).getGlobalID(v));      
 					weights[u].push_back(weight);
 					edge_counter++;
 					// add also the other direction v --> u
 					edges[v].push_back((*this).getGlobalID(u));
 					weights[v].push_back(weight);
 					edge_counter++;
-					break;
+//removing/commenting the break below will add all local edges
+// when activated we add only one local edge
+// break;
 				} // if no local adjacent node exists, u stays isolated // highly possible
 				else {
                     //TODO: this is increased for  all non-local neighbors of u, not once per node. Is this intended?
@@ -162,7 +175,8 @@ void parallel_graph_access::reduce_edges_aggressive(
 		}else {
 			forall_out_edges((*this), e, u) {
 				NodeID v = (*this).getEdgeTarget(e);
-				if (is_high_degree_node[(*this).getGlobalID(v)] != true) {
+				//if ( is_high_degree_node.find(getGlobalID(v))==is_high_degree_node.end()) {
+                if( !existsInMap(getGlobalID(v)) ){
 					EdgeWeight weight = (*this).getEdgeWeight(e);
 					edges[u].push_back((*this).getGlobalID(v));
 					weights[u].push_back(weight);
@@ -183,7 +197,9 @@ void parallel_graph_access::reduce_edges_aggressive(
 	    
 }
 
-void parallel_graph_access::reduce_edges(std::unordered_map<NodeID,bool> is_high_degree_node ,
+void parallel_graph_access::reduce_edges(
+    //std::set<NodeID> is_high_degree_node ,
+    const std::unordered_map<NodeID,bool>& is_high_degree_node,
 							   std::vector< std::vector< NodeID > > & edges,
 							   std::vector< std::vector< NodeID > > & weights,
 							   EdgeID &edge_counter) {
@@ -193,9 +209,19 @@ void parallel_graph_access::reduce_edges(std::unordered_map<NodeID,bool> is_high
 	assert( edges.size() == (*this).number_of_local_nodes());
 	ULONG numIsolatedHdnodes = 0;
 	// ULONG numIsolatedNodes = 0;
-	
+	  
+    auto existsInMap =[&]( const NodeID vertex ){
+        try{ 
+            is_high_degree_node.at(vertex);
+            return true;
+        }catch(  const std::out_of_range& oor ){
+            return false;
+        }
+        return true;
+    };
+
 	forall_local_nodes((*this),u) {
-		if (is_high_degree_node[(*this).getGlobalID(u)] == true) {
+        if( existsInMap(getGlobalID(u)) ){
 			/* parse the edge list of u */
 			EdgeID edge_count_per_node = 0;
 			long first_local_edge = -1;
@@ -203,7 +229,8 @@ void parallel_graph_access::reduce_edges(std::unordered_map<NodeID,bool> is_high
 				NodeID v = (*this).getEdgeTarget(e);
 				EdgeWeight weight = (*this).getEdgeWeight(e);
 				// add edges to all non high degree nodes, v
-				if ( !is_high_degree_node[(*this).getGlobalID(v)] ) {
+				//if ( is_high_degree_node.find(getGlobalID(v))==is_high_degree_node.end() ) {
+                if( !existsInMap(getGlobalID(v)) ){
 					edges[u].push_back((*this).getGlobalID(v));
 					weights[u].push_back(weight);
 					edge_counter++;
@@ -257,8 +284,12 @@ void parallel_graph_access::reduce_edges(std::unordered_map<NodeID,bool> is_high
 
 }
 
-void parallel_graph_access::reduce_graph(parallel_graph_access & outG, std::vector< NodeID > node_list, MPI_Comm communicator,
-					      const bool aggressive_removal) {
+void parallel_graph_access::reduce_graph(
+    parallel_graph_access & outG,
+    const std::vector< NodeID >& node_list,
+    MPI_Comm communicator,
+    const bool aggressive_removal) {
+
 	assert(!node_list.empty());
 	int rank, comm_size;
 	MPI_Comm_rank( communicator, &rank);
@@ -266,17 +297,26 @@ void parallel_graph_access::reduce_graph(parallel_graph_access & outG, std::vect
 	NodeID n = number_of_global_nodes();
 	NodeID local_nnodes = number_of_local_nodes();
 
-	//TODO: this probably uses too much memory, we can have a vector of size local_n and use the mapping from localIDs to globalOS
-    //since node_list stores global IDs
-	//std::vector<bool> is_high_degree_node(local_nnodes, false);
+
     std::unordered_map<NodeID,bool> is_high_degree_node;
-	for(auto& u : node_list){
-        is_high_degree_node[u] = true;
+    {
+        //TODO: if we add only the needed edges we have a smaller map but the time
+        //construct the reduced graph increases, perhaps because of set::find.
+        //check it the extra time worths it
+        std::vector<NodeID> lg = get_globalIDs_of_local_ghost();
+        std::set<NodeID> local_ghost_globalIDs( lg.begin(), lg.end() );
+
+        for(auto& u : node_list){
+            if( is_local_node_from_global_id(u) 
+                || local_ghost_globalIDs.find(u)!=local_ghost_globalIDs.end() ){
+                //insert only needed nodes
+                is_high_degree_node[u]=true;
+            }
+        }
     }
 
-	ULONG from  = get_from_range(); // rank     * ceil(n / (double)comm_size);
-	ULONG to    = get_to_range(); //(rank+1) * ceil(n / (double)comm_size) - 1;
-	//to = std::min<unsigned long>(to, n-1);
+	ULONG from  = get_from_range(); 
+	ULONG to    = get_to_range(); 
 	  
 	std::vector< std::vector< NodeID > > edges;
 	edges.resize(local_nnodes);
@@ -285,9 +325,9 @@ void parallel_graph_access::reduce_graph(parallel_graph_access & outG, std::vect
 	EdgeID edge_counter = 0;
 	
 	if (aggressive_removal)
-		(*this).reduce_edges_aggressive(is_high_degree_node, edges, weights, edge_counter);
+		reduce_edges_aggressive(is_high_degree_node, edges, weights, edge_counter);
 	else
-		(*this).reduce_edges(is_high_degree_node,edges, weights, edge_counter);
+		reduce_edges(is_high_degree_node,edges, weights, edge_counter);
 
 		  
 	int t_edge_count = 0;
@@ -304,7 +344,7 @@ void parallel_graph_access::reduce_graph(parallel_graph_access & outG, std::vect
 	
 	for (NodeID i = 0; i < local_nnodes; ++i) {
 		NodeID node = outG.new_node();
-		outG.setNodeWeight(node, 1);          //TODO: if this has node weights we need to copy the node weight
+		outG.setNodeWeight(node, 1 );          //TODO: if this has node weights we need to copy the node weight: getNodeWeight(??)
 		outG.setNodeLabel(node, from+node);   //TODO: not clear what the label should be; now is the globalID
 		outG.setSecondPartitionIndex(node, 0);
 		for( ULONG j = 0; j < edges[i].size(); j++) {
@@ -552,6 +592,15 @@ std::vector<NodeID> parallel_graph_access::get_local_ghost_degrees(){
         ghost_degrees[node] = gDeg;
     }endfor
     return ghost_degrees;
+}
+
+std::vector<NodeID> parallel_graph_access::get_globalIDs_of_local_ghost(){
+    std::vector<NodeID> ghost_IDs; 
+    forall_ghost_nodes((*this), node) {
+        ghost_IDs.push_back( getGlobalID(node) );
+    }endfor
+    assert( ghost_IDs.size()==number_of_ghost_nodes);
+    return ghost_IDs;
 }
 
 std::tuple<EdgeWeight,EdgeWeight,NodeWeight> parallel_graph_access::get_ghostEdges_nodeWeight(){

@@ -308,7 +308,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 			if (!global_hdn.empty()) {
 			  if ( rank == ROOT )
 			    std::cout << "log> LAST REFINEMENT STEP ON FINEST GRAPH " << std::endl; 
-			  plc_refinement.perform_parallel_label_compression( working_config, in_G, false, false, PEtree); // balance, for_coarsening
+			  plc_refinement.perform_parallel_label_compression( working_config, in_G, true, false, PEtree); // balance, for_coarsening
 			}
 		 }
 		

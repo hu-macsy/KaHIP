@@ -15,6 +15,7 @@
 #include <ostream>
 #include <fstream>
 #include <vector>
+#include <set>
 
 #include "data_structure/balance_management.h"
 #include "pdefinitions.h"
@@ -469,15 +470,19 @@ public:
 	void copy_graph( parallel_graph_access & H, MPI_Comm communicator );
 
 	/** Compute a reduced graph H by removing edges adjacent to nodes in a node list */
-        void reduce_graph(parallel_graph_access & H, std::vector< NodeID > nodes,
+        void reduce_graph(parallel_graph_access & H, const std::vector< NodeID >& nodes,
 			  MPI_Comm communicator, const bool aggressive_removal = false);
 
-        void reduce_edges(std::unordered_map<NodeID,bool> is_high_degree_node ,
+        void reduce_edges(
+                        //std::set<NodeID> is_high_degree_node ,
+                        const std::unordered_map<NodeID,bool>& is_high_degree_node,
 					    std::vector< std::vector< NodeID > > & edges,
 					    std::vector< std::vector< NodeID > > & weights,
 					    EdgeID & edge_counter );
   
-        void reduce_edges_aggressive(std::unordered_map<NodeID,bool> is_high_degree_node ,
+        void reduce_edges_aggressive(
+                     //std::set<NodeID> is_high_degree_node ,
+                     const std::unordered_map<NodeID,bool>& is_high_degree_node,
 				     std::vector< std::vector< NodeID > > & edges,
 				     std::vector< std::vector< NodeID > > & weights,
 				     EdgeID & edge_counter );
@@ -512,9 +517,13 @@ public:
         */
         std::tuple<EdgeWeight,EdgeWeight,NodeWeight> get_ghostEdges_nodeWeight();
   
-        /** Given an arrays with global node IDs
+        /**  Each PE provides a local vector with node (global) IDs and a replicated vector is returned that contains all node IDS from all PEs. Basically is a gather and broadcast to everyone
         */
         std::vector<NodeID> get_all_global_nodes(const std::vector<NodeID> local_nodes );
+
+        /** Returns an array with the global IDs of all local ghost nodes on this PE.
+        */
+        std::vector<NodeID> get_globalIDs_of_local_ghost();
 
         /* ============================================================= */
         /* methods handling balance */
