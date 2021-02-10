@@ -124,14 +124,24 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
                     const NodeID numLocalNodes = partition_config.hdn_percent*in_G.number_of_global_nodes()/size;
                     std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, partition_config.use_ghost_degree );
+                    
+                    //compute ghost edge percentage. if not too high, do not reduce graph
+                    {
+                        [[maybe_unused]] auto [globalInterEdges, globalIntraEdges, globalWeight ] = in_G.get_ghostEdges_nodeWeight();
+                        const double ghostEdgePercent =  globalInterEdges/(double)in_G.number_of_global_edges();
+                        if (rank == ROOT) std::cout << "log> ghost node percentage is " << ghostEdgePercent << ", will reduce graph if it is lower than 0.8" << std::endl;
+                        if( ghostEdgePercent<0.8 ){
+                            global_hdn.clear();
+                        }
+                    }
 
                     parallel_graph_access G(communicator);
 
 		if(global_hdn.empty()) {
 			
-		        in_G.copy_graph(G, communicator);
+            in_G.copy_graph(G, communicator);
 			if (rank == ROOT) {
-				std::cout << "WARNING : Empty list of high degree nodes! " << std::endl;
+				std::cout << "log> Empty list of high degree nodes! " << std::endl;
 				std::cout << " ======================================== " << std::endl;
 				std::cout << " ===========  Copying graph   =========== " << std::endl;
 				std::cout << " ======================================== " << std::endl;
@@ -145,7 +155,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 			// reducing graph
 			if( partition_config.aggressive_removal ) {
 				if (rank == ROOT)
-					std::cout << "log>  Enable aggressive removal of edges. " << std::endl;
+					std::cout << "log> Enable aggressive removal of edges. " << std::endl;
 				in_G.reduce_graph(G, global_hdn, communicator, partition_config.aggressive_removal, partition_config.keepAllLocal);
 			}
 			else {
@@ -167,6 +177,18 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 
 		
 		double reducing_graph_time = t.elapsed(); // including finding high degree nodes // barrier in get_reduced, get_copy
+           
+                //compute some stats
+                [[maybe_unused]] auto [red_globalInterEdges, red_globalIntraEdges, red_globalWeight ] = G.get_ghostEdges_nodeWeight();
+                auto [globalInterEdges, globalIntraEdges, globalWeight ] = in_G.get_ghostEdges_nodeWeight();
+                const double ghostEdgePercent =  globalInterEdges/(double)in_G.number_of_global_edges();
+
+                if( rank == ROOT ) {
+                        std::cout <<  "log> ghost edges/m " << ghostEdgePercent << std::endl;
+                        std::cout <<  "log> local edges/m " <<  globalIntraEdges/(double)in_G.number_of_global_edges() << std::endl;
+                        std::cout <<  "log> reduced G ghost edges/m " <<  red_globalInterEdges/(double)G.number_of_global_edges() << std::endl;
+                        std::cout <<  "log> reduced G local edges/m " <<  red_globalIntraEdges/(double)G.number_of_global_edges() << std::endl;
+                }
 
                 if( partition_config.refinement_focus ){
                         //in this version, the coarsening factor depends on the input size. As cluster_coarsening_factor sets a limit to the size
@@ -208,17 +230,6 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 //G.printMemoryUsage(std::cout);
 if( rank == ROOT ) std::cout<< __LINE__ << ", allocated data structs" << std::endl;
 getFreeRam(MPI_COMM_WORLD, myMem, true);
-
-                //compute some stats
-                [[maybe_unused]] auto [red_globalInterEdges, red_globalIntraEdges, red_globalWeight ] = G.get_ghostEdges_nodeWeight();
-                auto [globalInterEdges, globalIntraEdges, globalWeight ] = in_G.get_ghostEdges_nodeWeight();
-
-                if( rank == ROOT ) {
-                        std::cout <<  "log> ghost edges/m " <<  globalInterEdges/(double)in_G.number_of_global_edges() << std::endl;
-                        std::cout <<  "log> local edges/m " <<  globalIntraEdges/(double)in_G.number_of_global_edges() << std::endl;
-                        std::cout <<  "log> reduced G ghost edges/m " <<  red_globalInterEdges/(double)G.number_of_global_edges() << std::endl;
-                        std::cout <<  "log> reduced G local edges/m " <<  red_globalIntraEdges/(double)G.number_of_global_edges() << std::endl;
-                }
 
                 t.restart();
                 double epsilon = (partition_config.inbalance)/100.0;
