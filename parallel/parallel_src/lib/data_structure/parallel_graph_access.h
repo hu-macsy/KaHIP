@@ -470,8 +470,12 @@ public:
 	void copy_graph( parallel_graph_access & H, MPI_Comm communicator );
 
 	/** Compute a reduced graph H by removing edges adjacent to nodes in a node list */
-        void reduce_graph(parallel_graph_access & H, const std::vector< NodeID >& nodes,
-			  MPI_Comm communicator, const bool aggressive_removal = false);
+        void reduce_graph(
+            parallel_graph_access & H,
+            const std::vector< NodeID >& nodes,
+            MPI_Comm communicator, 
+            const bool aggressive_removal = false,
+            const bool keepAllLocal = false );
 
         void reduce_edges(
                         //std::set<NodeID> is_high_degree_node ,
@@ -485,7 +489,8 @@ public:
                      const std::unordered_map<NodeID,bool>& is_high_degree_node,
 				     std::vector< std::vector< NodeID > > & edges,
 				     std::vector< std::vector< NodeID > > & weights,
-				     EdgeID & edge_counter );
+				     EdgeID & edge_counter,
+                     const bool keepAllLocal=false );
   
   
         /** Return all local node IDs with degree > minDegree for the local nodes.

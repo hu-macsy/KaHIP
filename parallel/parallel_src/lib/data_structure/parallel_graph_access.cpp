@@ -126,7 +126,8 @@ void parallel_graph_access::reduce_edges_aggressive(
     const std::unordered_map<NodeID,bool>& is_high_degree_node,
 						    std::vector< std::vector< NodeID > > & edges,
 						    std::vector< std::vector< NodeID > > & weights,
-						    EdgeID & edge_counter ) {
+						    EdgeID & edge_counter,
+                            const bool keepAllLocal ) {
 	assert(is_high_degree_node.size() == (*this).number_of_local_nodes());
 	assert( edges.size() == weights.size() );
 	assert( edges.size() == (*this).number_of_local_nodes()); 
@@ -161,7 +162,9 @@ void parallel_graph_access::reduce_edges_aggressive(
 					edge_counter++;
 //removing/commenting the break below will add all local edges
 // when activated we add only one local edge
-// break;
+if( !keepAllLocal ){
+    break;
+}
 				} // if no local adjacent node exists, u stays isolated // highly possible
 				else {
                     //TODO: this is increased for  all non-local neighbors of u, not once per node. Is this intended?
@@ -288,7 +291,8 @@ void parallel_graph_access::reduce_graph(
     parallel_graph_access & outG,
     const std::vector< NodeID >& node_list,
     MPI_Comm communicator,
-    const bool aggressive_removal) {
+    const bool aggressive_removal,
+    const bool keelAllLocal) {
 
 	assert(!node_list.empty());
 	int rank, comm_size;
@@ -297,22 +301,15 @@ void parallel_graph_access::reduce_graph(
 	NodeID n = number_of_global_nodes();
 	NodeID local_nnodes = number_of_local_nodes();
 
-
     std::unordered_map<NodeID,bool> is_high_degree_node;
-    {
-        //TODO: if we add only the needed edges we have a smaller map but the time
-        //construct the reduced graph increases, perhaps because of set::find.
-        //check it the extra time worths it
-        std::vector<NodeID> lg = get_globalIDs_of_local_ghost();
-        std::set<NodeID> local_ghost_globalIDs( lg.begin(), lg.end() );
+    //we use a set and add only the needed edges we have a smaller map but the
+    //time to construct the reduced graph increases, because of set::find.
+    //and we do not save much memory        
+    // std::vector<NodeID> lg = get_globalIDs_of_local_ghost();
+    // std::set<NodeID> local_ghost_globalIDs( lg.begin(), lg.end() );
 
-        for(auto& u : node_list){
-            if( is_local_node_from_global_id(u) 
-                || local_ghost_globalIDs.find(u)!=local_ghost_globalIDs.end() ){
-                //insert only needed nodes
-                is_high_degree_node[u]=true;
-            }
-        }
+    for(auto& u : node_list){
+            is_high_degree_node[u]=true;
     }
 
 	ULONG from  = get_from_range(); 
@@ -325,7 +322,7 @@ void parallel_graph_access::reduce_graph(
 	EdgeID edge_counter = 0;
 	
 	if (aggressive_removal)
-		reduce_edges_aggressive(is_high_degree_node, edges, weights, edge_counter);
+		reduce_edges_aggressive(is_high_degree_node, edges, weights, edge_counter, keelAllLocal);
 	else
 		reduce_edges(is_high_degree_node,edges, weights, edge_counter);
 
