@@ -69,6 +69,7 @@ int parse_parameters(int argn, char **argv,
         struct arg_int *update_step_size                     = arg_int0(NULL, "update_step_size", NULL, "Every how many nodes to update ghost nodes.");
         struct arg_lit *adjustable_update_step               = arg_lit0(NULL, "adjustable_update_step", "When coarsening/refining,  automatically adjust the update step" );
         struct arg_lit *aggressive_removal                   = arg_lit0(NULL, "aggressive_removal","Enable aggressive removal of edges that will be reintroduced (to manage memory issues).");
+        struct arg_lit *keepAllLocal                         = arg_lit0(NULL, "keepAllLocal","used when reducing graph; when activated we keep all local edges");
         struct arg_dbl *hdn_percent                          = arg_dbl0(NULL, "hdn_percent", NULL, "High degree nodes percentage (from global nodes) to remove edges from. Value range 0<= x < 1. Default is 0.2.");
         struct arg_lit *use_ghost_degree                     = arg_lit0(NULL, "use_ghost_degree", "Used when picking high degree nodes to remove edges. If false, we use the normal degree of a node. If true, we pick nodes based on their ghost-degree, i.e. the number of ghost neighbors they have.");
 
@@ -76,7 +77,7 @@ int parse_parameters(int argn, char **argv,
         void* argtable[] = {
 #ifdef PARALLEL_LABEL_COMPRESSION
 	  help, filename, filename_output, user_seed, k, inbalance, preconfiguration, vertex_degree_weights,
-	  save_partition, save_partition_binary, hierarchy_parameter_string, distance_parameter_string, aggressive_removal,
+	  save_partition, save_partition_binary, hierarchy_parameter_string, distance_parameter_string, aggressive_removal, keepAllLocal,
 	  only_boundary, num_vcycles, label_iterations_refinement, label_iterations_coarsening, stop_factor,
 	  no_refinement_in_last_iteration, cluster_coarsening_factor, max_coarsening_levels, ignore_PEtree, 
 	  update_step_size, adjustable_update_step, hdn_percent, use_ghost_degree,
@@ -374,10 +375,12 @@ int parse_parameters(int argn, char **argv,
             partition_config.ignore_PEtree = true;
         }
 
-	if(aggressive_removal->count > 0) {
-	  partition_config.aggressive_removal = true;
-	}
-    
+        if(keepAllLocal->count > 0) {
+            partition_config.keepAllLocal = true;
+        }
+        if(aggressive_removal->count > 0) {
+            partition_config.aggressive_removal = true;
+        }
         if(use_ghost_degree->count > 0) {
             partition_config.use_ghost_degree = true;
         }

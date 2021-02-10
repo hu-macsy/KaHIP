@@ -142,6 +142,7 @@ struct PPartitionConfig
         //=======================================
 
         bool aggressive_removal = false;
+        bool keepAllLocal = false;
         bool integrated_mapping;
         bool ignore_PEtree = false;
         bool only_boundary = false;
