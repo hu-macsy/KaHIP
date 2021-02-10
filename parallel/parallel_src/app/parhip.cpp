@@ -146,7 +146,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 			if( partition_config.aggressive_removal ) {
 				if (rank == ROOT)
 					std::cout << "log>  Enable aggressive removal of edges. " << std::endl;
-				in_G.reduce_graph(G, global_hdn, communicator, partition_config.aggressive_removal);
+				in_G.reduce_graph(G, global_hdn, communicator, partition_config.aggressive_removal, partition_config.keepAllLocal);
 			}
 			else {
 				in_G.reduce_graph(G, global_hdn, communicator);
@@ -366,7 +366,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         std::cout << "log> total inpart time " <<  qm.get_inpart_time() << std::endl;
                         std::cout << "log> total refine time " <<  qm.get_refine_time() << std::endl;
                         std::cout << "log> total final refine time elapsed " << final_refine_time  << std::endl;
-                        std::cout << "log> total solution time (c+ip+r+r) elapsed " << final_refine_time + running_time  << std::endl;
+                        std::cout << "log> total solution time (r+c+ip+r+r) elapsed " << reducing_graph_time + final_refine_time + running_time  << std::endl;
                         std::cout << "log> initial numNodes " <<  qm.get_initial_numNodes() << std::endl;
                         std::cout << "log> initial numEdges " <<  qm.get_initial_numEdges() << std::endl;
                         std::cout << "log> initial edge cut  " <<  qm.get_initial_cut()  << std::endl; // comparing to adding network information
