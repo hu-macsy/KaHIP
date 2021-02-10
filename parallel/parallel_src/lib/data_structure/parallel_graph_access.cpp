@@ -160,11 +160,11 @@ void parallel_graph_access::reduce_edges_aggressive(
 					edges[v].push_back((*this).getGlobalID(u));
 					weights[v].push_back(weight);
 					edge_counter++;
-//removing/commenting the break below will add all local edges
-// when activated we add only one local edge
-if( !keepAllLocal ){
-    break;
-}
+                    //removing/commenting the break below will add all local edges
+                    // when activated we add only one local edge
+                    if( !keepAllLocal ){
+                        break;
+                    }
 				} // if no local adjacent node exists, u stays isolated // highly possible
 				else {
                     //TODO: this is increased for  all non-local neighbors of u, not once per node. Is this intended?
