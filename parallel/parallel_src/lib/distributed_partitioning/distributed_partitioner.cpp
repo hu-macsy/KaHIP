@@ -318,13 +318,38 @@ PRINT(std::cout << "global_ghost_nodes "<< global_ghost_nodes << " , max_ghost_n
 
         t.restart();
 
+        //project from coarser (Q) to finer (G)
         parallel_projection parallel_project;
         parallel_project.parallel_project( communicator, G, Q ); // contains a Barrier
 
 #ifndef NOOUTPUT
         EdgeWeight cut = qm.edge_cut(G, communicator);
+        double bal = qm.balance(config, G, communicator);
         if( rank == ROOT ) {
-                std::cout <<  "log>cycle: " << m_cycle << " level: " << m_level << " projection took " <<  t.elapsed() << ", cut is " << cut << std::endl;
+                std::cout <<  "log>cycle: " << m_cycle << " level: " << m_level << " projection took " <<  t.elapsed() << ", cut is " << cut << " and balance " << bal << std::endl;
+        }
+
+        {
+            //count not partitioned nodes
+            NodeID local_not_part =0;
+            NodeID local_part =0;
+            forall_local_nodes( G, i ){
+                // if( getNodeLabel(i)<config.k ){
+                //     local_part++;
+                // }else{
+                //     local_not_part++;
+                // }
+                (G.getNodeLabel(i)<config.k) ? local_part++ : local_not_part++ ;
+                assert( G.getNodeLabel(i)<config.k );
+            }endfor
+            NodeID global_not_part;
+            NodeID global_part;
+            MPI_Reduce( &local_not_part, &global_not_part, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, communicator);
+            MPI_Reduce( &local_part, &global_part, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, communicator);
+            if( rank == ROOT ) {
+                std::cout << "-> -> -> -> globally not partitioned nodes " << global_not_part << ", partitioned " << global_part << std::endl;
+            }
+
         }
 #endif
 
@@ -332,7 +357,7 @@ PRINT(std::cout << "global_ghost_nodes "<< global_ghost_nodes << " , max_ghost_n
         if (!counter) {
             EdgeWeight cut = qm.edge_cut(G, communicator);
             qm.set_initial_cut(cut);
-            EdgeWeight  qap = qm.total_qap( G, PEtree, communicator );
+EdgeWeight  qap = 9999;//qm.total_qap( G, PEtree, communicator );
             qm.set_initial_qap( qap );
             #ifndef NOOUTPUT
             if( rank == ROOT ) {

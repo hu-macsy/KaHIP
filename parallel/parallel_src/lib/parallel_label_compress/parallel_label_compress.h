@@ -89,7 +89,11 @@ class parallel_label_compress {
                                 //      std::cout << "log> level " << i << ", will update ghost nodes every " << updateSize << " seen nodes" << std::endl;
                                 // }
 
-
+if( usePEdistances ){
+    forall_local_nodes( G, i ){
+        assert( G.getNodeLabel(i)<config.k );
+    }endfor
+}
                                 forall_local_nodes(G, rnode) {
                                         const NodeID node = permutation[rnode]; // use the current random node
                                         numSeenNodes++;
@@ -125,10 +129,15 @@ class parallel_label_compress {
                                                 }
 
                                         } else {
-                                                if( usePEdistances){
+                                                if( usePEdistances ){
                                                         assert( !config.vcycle );
                                                         assert( config.only_boundary ? is_boundary(node,G):true );
+if( old_block>=config.k){
+    std::cout<< "old_block " << old_block << " , config.k " << config.k << std::endl;
+}
+assert( old_block<config.k );
                                                         max_block = refine_with_PU_distances(node, G, PEtree, cluster_upperbound);
+assert( max_block<config.k );
                                                 }else{
                                                         max_block = coarse_or_refine(node, G, hash_map, cluster_upperbound, own_block_balanced, config.vcycle );
                                                 }
@@ -136,7 +145,6 @@ class parallel_label_compress {
 
                                         if( old_block != max_block ) {
                                                 G.setNodeLabel(node, max_block);
-
                                                 G.setBlockSize(old_block, G.getBlockSize(old_block) - node_weight);
                                                 G.setBlockSize(max_block, G.getBlockSize(max_block) + node_weight);
                                                 numChanges++;
@@ -211,6 +219,10 @@ class parallel_label_compress {
                         forall_out_edges(G, e, node) {
                                 const NodeID target             = G.getEdgeTarget(e);
                                 const PartitionID ngbr_block    = G.getNodeLabel(target);
+if( ngbr_block > PEtree.get_numPUs() ){
+std::cout << __FILE__ << ", " << __LINE__ << ", old_block " << old_block << ", ngbr_block " << ngbr_block  << " numPUs " << PEtree.get_numPUs() << " target " << target << std::endl;
+}
+assert( ngbr_block < PEtree.get_numPUs() );
                                 ngbr_blocks[ngbr_block]        += G.getEdgeWeight(e);
                         }endfor
 
@@ -221,7 +233,11 @@ class parallel_label_compress {
 
                         for( auto const& x : ngbr_blocks ){
                                 //the candidate new block for the node
-                                const PartitionID new_block = x.first;
+                                const PartitionID new_block = x.first; // first is the key, second the value
+if( new_block>=PEtree.get_numPUs() ){
+std::cout << __FILE__ << ", " << __LINE__ << ", new_block " << new_block  << " numPUs " << PEtree.get_numPUs() << std::endl; 
+}
+assert( new_block<PEtree.get_numPUs() );
                                 //check: if moving to new block is gonna violate the weight bound, do not consider this move
                                 // if the new block is the old, then the size constraint is not violated
                                 bool sizeconstraint = new_block==old_block || G.getBlockSize(new_block) + node_weight <= cluster_upperbound;
@@ -239,6 +255,10 @@ class parallel_label_compress {
                                         if( ngbr_block==new_block ){
                                             continue;
                                         }
+if( ngbr_block>=PEtree.get_numPUs() ){
+std::cout << __FILE__ << ", " << __LINE__ << ", ngbr_block " << ngbr_block  << " numPUs " << PEtree.get_numPUs() << std::endl; 
+}
+assert( new_block<PEtree.get_numPUs() );
                                         comm_cost += PEtree.getDistance_PxPy(new_block, ngbr_block) * comm_vol;
                                 }
 
