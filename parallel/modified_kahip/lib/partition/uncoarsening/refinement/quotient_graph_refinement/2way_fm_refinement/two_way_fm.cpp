@@ -392,7 +392,7 @@ void two_way_fm::init_queue_with_boundary(const PartitionConfig & config,
 
                 Gain gain = ext_degree - int_degree;
                 queue->insert(cur_bnd_node, gain);
-                ASSERT_TRUE(ext_degree > 0);
+//ASSERT_TRUE(ext_degree > 0);
                 ASSERT_EQ(partition_of_boundary, G.getPartitionIndex(cur_bnd_node));
         }
 }
@@ -412,7 +412,7 @@ bool two_way_fm::assert_only_boundary_nodes(graph_access & G, PartialBoundary & 
                 int_ext_degree(G, cur_bnd_node, lhs, rhs, int_degree, ext_degree);
 
                 ASSERT_EQ(G.getPartitionIndex(cur_bnd_node), lhs); 
-                ASSERT_TRUE(ext_degree > 0); 
+//ASSERT_TRUE(ext_degree >= 0);  
         } endfor
         return true;
 }
