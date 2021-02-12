@@ -79,7 +79,9 @@ void parallel_graph_access::init_balance_management( PPartitionConfig & config )
                 m_bm = new balance_management_refinement( this, config.total_num_labels );
         }
 }
+
 /* init balance management based on an input partitioned graph */
+/*
 void parallel_graph_access::init_balance_management_from_graph( PPartitionConfig & config,
 								parallel_graph_access & G) {
         if( m_bm != NULL ) {
@@ -89,6 +91,7 @@ void parallel_graph_access::init_balance_management_from_graph( PPartitionConfig
         assert( config.total_num_labels == config.k );
 	m_bm = new balance_management_refinement( this, config.total_num_labels, G );
 }
+*/
 
 
 void parallel_graph_access::update_non_contained_block_balance( PartitionID from, PartitionID to, NodeWeight node_weight) {
@@ -128,7 +131,6 @@ void parallel_graph_access::reduce_edges_aggressive(
 						    std::vector< std::vector< NodeID > > & weights,
 						    EdgeID & edge_counter,
                             const bool keepAllLocal ) {
-	assert(is_high_degree_node.size() == (*this).number_of_local_nodes());
 	assert( edges.size() == weights.size() );
 	assert( edges.size() == (*this).number_of_local_nodes()); 
 	ULONG numIsolatedHdnodes = 0;
@@ -207,7 +209,6 @@ void parallel_graph_access::reduce_edges(
 							   std::vector< std::vector< NodeID > > & weights,
 							   EdgeID &edge_counter) {
 
-	assert(is_high_degree_node.size() == (*this).number_of_local_nodes());
 	assert( edges.size() == weights.size());
 	assert( edges.size() == (*this).number_of_local_nodes());
 	ULONG numIsolatedHdnodes = 0;
@@ -292,7 +293,7 @@ void parallel_graph_access::reduce_graph(
     const std::vector< NodeID >& node_list,
     MPI_Comm communicator,
     const bool aggressive_removal,
-    const bool keelAllLocal) {
+    const bool keepAllLocal) {
 
 	assert(!node_list.empty());
 	int rank, comm_size;
@@ -322,9 +323,9 @@ void parallel_graph_access::reduce_graph(
 	EdgeID edge_counter = 0;
 	
 	if (aggressive_removal)
-		reduce_edges_aggressive(is_high_degree_node, edges, weights, edge_counter, keelAllLocal);
+		reduce_edges_aggressive(is_high_degree_node, edges, weights, edge_counter, keepAllLocal);
 	else
-		reduce_edges(is_high_degree_node,edges, weights, edge_counter);
+		reduce_edges(is_high_degree_node, edges, weights, edge_counter);
 
 		  
 	int t_edge_count = 0;
@@ -342,7 +343,9 @@ void parallel_graph_access::reduce_graph(
 	for (NodeID i = 0; i < local_nnodes; ++i) {
 		NodeID node = outG.new_node();
 		outG.setNodeWeight(node, 1 );          //TODO: if this has node weights we need to copy the node weight: getNodeWeight(??)
-		outG.setNodeLabel(node, from+node);   //TODO: not clear what the label should be; now is the globalID
+		//outG.setNodeLabel(node, from+node);   //TODO: not clear what the label should be; now is the globalID
+outG.setNodeLabel(node,  this->getNodeLabel(node) );
+//outG.setNodeLabel(node, 0);
 		outG.setSecondPartitionIndex(node, 0);
 		for( ULONG j = 0; j < edges[i].size(); j++) {
 			NodeID target = edges[i][j];
@@ -362,19 +365,11 @@ void parallel_graph_access::copy_graph(parallel_graph_access & outG, MPI_Comm co
 	int rank, comm_size;
 	MPI_Comm_rank( communicator, &rank);
 	MPI_Comm_size( communicator, &comm_size);
-	
-	NodeID global_nnodes = (*this).number_of_global_nodes();
-	
-	 	
-	NodeID n = global_nnodes;
-	ULONG from  = rank     * ceil(n / (double)comm_size);
-	ULONG to    = (rank+1) * ceil(n / (double)comm_size) - 1;
-	to = std::min<unsigned long>(to, n-1);
-	ULONG local_no_nodes = 0;
-	if (from <= to)
-		local_no_nodes = to - from + 1;
-	
-	
+
+    NodeID from  = get_from_range(); 
+    NodeID to    = get_to_range(); 
+    NodeID local_no_nodes = number_of_local_nodes();
+    NodeID global_nnodes = number_of_global_nodes();
 
 	std::vector< std::vector< NodeID > > local_edge_lists;
 	local_edge_lists.resize(local_no_nodes);
@@ -410,7 +405,7 @@ void parallel_graph_access::copy_graph(parallel_graph_access & outG, MPI_Comm co
 	
 	std::vector< NodeID > vertex_dist( comm_size+1, 0 );
 	for( PEID peID = 0; peID <= comm_size; peID++) {
-		vertex_dist[peID] = peID * ceil(n / (double)comm_size); // from positions
+		vertex_dist[peID] = peID * ceil(global_nnodes / (double)comm_size); // from positions
 	}
 	outG.set_range_array(vertex_dist);
 	
@@ -418,8 +413,8 @@ void parallel_graph_access::copy_graph(parallel_graph_access & outG, MPI_Comm co
 	
 	for (NodeID i = 0; i < local_no_nodes; ++i) {
 		NodeID node = outG.new_node();
-		outG.setNodeWeight(node, 1);
-		outG.setNodeLabel(node, from+node);
+		outG.setNodeWeight(node, 1);      //TODO: if this has node weights we need to copy the node weight: getNodeWeight(??)
+        outG.setNodeLabel(node, from+node);   //TODO: not clear what the label should be; now is the globalID
 		outG.setSecondPartitionIndex(node, 0);
 		for( ULONG j = 0; j < local_edge_lists[i].size(); j++) {
 			NodeID target = local_edge_lists[i][j];
@@ -596,7 +591,7 @@ std::vector<NodeID> parallel_graph_access::get_globalIDs_of_local_ghost(){
     forall_ghost_nodes((*this), node) {
         ghost_IDs.push_back( getGlobalID(node) );
     }endfor
-    assert( ghost_IDs.size()==number_of_ghost_nodes);
+    assert( ghost_IDs.size()==number_of_ghost_nodes() );
     return ghost_IDs;
 }
 
