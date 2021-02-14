@@ -547,7 +547,7 @@ inline bool complete_boundary::assert_bnodes_in_boundaries() {
 
                                         if(is_cut_edge) {
                                                 edge_cut += G.getEdgeWeight(e);
-//ASSERT_TRUE(contains(n, source_partition,&bp));
+                                                ASSERT_TRUE(contains(n, source_partition,&bp));
                                         }
 
                                 } endfor
@@ -578,9 +578,8 @@ inline bool complete_boundary::assert_boundaries_are_bnodes() {
                                 bp.lhs = partition;
                                 bp.rhs = targets_partition;
 
-//ASSERT_TRUE(contains(n, partition, &bp));
-//ASSERT_TRUE(contains(target, targets_partition, &bp));
-
+                                ASSERT_TRUE(contains(n, partition, &bp));
+                                ASSERT_TRUE(contains(target, targets_partition, &bp));
                          }
                  } endfor
                  

@@ -344,8 +344,7 @@ void parallel_graph_access::reduce_graph(
 		NodeID node = outG.new_node();
 		outG.setNodeWeight(node, 1 );          //TODO: if this has node weights we need to copy the node weight: getNodeWeight(??)
 		//outG.setNodeLabel(node, from+node);   //TODO: not clear what the label should be; now is the globalID
-outG.setNodeLabel(node,  this->getNodeLabel(node) );
-//outG.setNodeLabel(node, 0);
+        outG.setNodeLabel(node,  this->getNodeLabel(node) );
 		outG.setSecondPartitionIndex(node, 0);
 		for( ULONG j = 0; j < edges[i].size(); j++) {
 			NodeID target = edges[i][j];

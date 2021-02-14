@@ -37,8 +37,8 @@ private:
 inline
 void balance_management_refinement::setBlockSize( PartitionID block, NodeWeight block_size ) {
         ULONG delta = block_size - m_total_block_weights[block];
-assert( block<m_local_block_weights.size() );
-assert( block<m_total_block_weights.size() );
+        assert( block<m_local_block_weights.size() );
+        assert( block<m_total_block_weights.size() );
         m_local_block_weights[block] += delta;
         m_total_block_weights[block] = block_size;
 }

@@ -77,10 +77,6 @@ EdgeWeight distributed_quality_metrics::total_qap( parallel_graph_access & G, co
                 return 0;
         }
 
-int rank;
-MPI_Comm_rank( communicator, &rank);
-std::cout << __FILE__ << ", " << __LINE__ << ", " << rank << std::endl; 
-
         forall_local_nodes(G, node) {
                 forall_out_edges(G, e, node) {
                         NodeID target = G.getEdgeTarget(e);
@@ -90,11 +86,9 @@ std::cout << __FILE__ << ", " << __LINE__ << ", " << rank << std::endl;
                 } endfor
         } endfor
 
-std::cout << __FILE__ << ", " << __LINE__ << ", " << rank << ": local_qap " << local_qap << std::endl; 
-
         EdgeWeight global_qap = 0;
         MPI_Allreduce(&local_qap, &global_qap, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, communicator);
-std::cout << __FILE__ << ", " << __LINE__ << ", " << rank << ": global_qap " << global_qap << std::endl; 
+
         return global_qap/2;
 }
 
