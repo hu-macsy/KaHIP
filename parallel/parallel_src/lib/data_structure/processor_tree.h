@@ -47,7 +47,7 @@ public:
 	*/
 
         inline int getDistance_PxPy(int x, int y) const {
-               assert((x <= numPUs) and (y <= numPUs) );
+                assert((x <= numPUs) and (y <= numPUs) );
                 int k = 0;
                 unsigned long long int xor_x_y = (*compact_bin_id)[x] ^ (*compact_bin_id)[y];
                 if (!xor_x_y) return 0;

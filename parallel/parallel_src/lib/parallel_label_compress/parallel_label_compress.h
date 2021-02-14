@@ -51,7 +51,7 @@ class parallel_label_compress {
                         //use distance if integrated mapping is activated and we do uncoarsening
                         //and we do not ignore the tree
                         const bool usePEdistances = !for_coarsening && config.integrated_mapping && !config.ignore_PEtree ? true : false ;
-                        
+
                         //checks, keep?
                         if( usePEdistances ){
                                 //tree should not be empty
@@ -89,11 +89,6 @@ class parallel_label_compress {
                                 //      std::cout << "log> level " << i << ", will update ghost nodes every " << updateSize << " seen nodes" << std::endl;
                                 // }
 
-if( usePEdistances ){
-    forall_local_nodes( G, i ){
-        assert( G.getNodeLabel(i)<config.k );
-    }endfor
-}
                                 forall_local_nodes(G, rnode) {
                                         const NodeID node = permutation[rnode]; // use the current random node
                                         numSeenNodes++;
@@ -132,12 +127,9 @@ if( usePEdistances ){
                                                 if( usePEdistances ){
                                                         assert( !config.vcycle );
                                                         assert( config.only_boundary ? is_boundary(node,G):true );
-if( old_block>=config.k){
-    std::cout<< "old_block " << old_block << " , config.k " << config.k << std::endl;
-}
-assert( old_block<config.k );
+                                                        assert( old_block<config.k );
                                                         max_block = refine_with_PU_distances(node, G, PEtree, cluster_upperbound);
-assert( max_block<config.k );
+                                                        assert( max_block<config.k );
                                                 }else{
                                                         max_block = coarse_or_refine(node, G, hash_map, cluster_upperbound, own_block_balanced, config.vcycle );
                                                 }
@@ -163,6 +155,12 @@ assert( max_block<config.k );
                                         hash_map.clear();
 
                                 } endfor //for G nodes
+
+#ifndef NDEBUG
+                                if( usePEdistances || !for_coarsening ){
+                                    G.check_labels( config.k );
+                                }
+#endif
                                 std::cout << "in iteration round " << i << ", we moved " << numChanges << " vertices" <<std::endl;
                                 G.update_ghost_node_data_finish(); 
                                 //std::cout << "updated ghost nodes" << std::endl;
@@ -219,10 +217,8 @@ assert( max_block<config.k );
                         forall_out_edges(G, e, node) {
                                 const NodeID target             = G.getEdgeTarget(e);
                                 const PartitionID ngbr_block    = G.getNodeLabel(target);
-if( ngbr_block > PEtree.get_numPUs() ){
-std::cout << __FILE__ << ", " << __LINE__ << ", old_block " << old_block << ", ngbr_block " << ngbr_block  << " numPUs " << PEtree.get_numPUs() << " target " << target << std::endl;
-}
-assert( ngbr_block < PEtree.get_numPUs() );
+
+                                assert( ngbr_block < PEtree.get_numPUs() );
                                 ngbr_blocks[ngbr_block]        += G.getEdgeWeight(e);
                         }endfor
 
@@ -234,10 +230,7 @@ assert( ngbr_block < PEtree.get_numPUs() );
                         for( auto const& x : ngbr_blocks ){
                                 //the candidate new block for the node
                                 const PartitionID new_block = x.first; // first is the key, second the value
-if( new_block>=PEtree.get_numPUs() ){
-std::cout << __FILE__ << ", " << __LINE__ << ", new_block " << new_block  << " numPUs " << PEtree.get_numPUs() << std::endl; 
-}
-assert( new_block<PEtree.get_numPUs() );
+                                assert( new_block<PEtree.get_numPUs() );
                                 //check: if moving to new block is gonna violate the weight bound, do not consider this move
                                 // if the new block is the old, then the size constraint is not violated
                                 bool sizeconstraint = new_block==old_block || G.getBlockSize(new_block) + node_weight <= cluster_upperbound;
@@ -255,10 +248,8 @@ assert( new_block<PEtree.get_numPUs() );
                                         if( ngbr_block==new_block ){
                                             continue;
                                         }
-if( ngbr_block>=PEtree.get_numPUs() ){
-std::cout << __FILE__ << ", " << __LINE__ << ", ngbr_block " << ngbr_block  << " numPUs " << PEtree.get_numPUs() << std::endl; 
-}
-assert( new_block<PEtree.get_numPUs() );
+
+                                        assert( ngbr_block<PEtree.get_numPUs() );
                                         comm_cost += PEtree.getDistance_PxPy(new_block, ngbr_block) * comm_vol;
                                 }
 
@@ -277,7 +268,6 @@ assert( new_block<PEtree.get_numPUs() );
                         // }
                         return best_block;
                 }
-
 
                 PartitionID coarse_or_refine(
                         const NodeID& node,

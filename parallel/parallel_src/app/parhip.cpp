@@ -179,11 +179,11 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 				std::cout << "log> ghost nodes, original graph " << in_G.number_of_ghost_nodes() << " reduced g " << G.number_of_ghost_nodes() << std::endl;
             }
 
+            //TODO: is something like this be needed?
             // G.update_ghost_node_data();
             // G.update_ghost_node_data_global();
             // G.update_ghost_node_data_finish();
 		}
-                        //update the ghost nodes of in_G
 
 		assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
 		assert( G.number_of_local_edges() <= in_G.number_of_local_edges() );    //edges are less or equal

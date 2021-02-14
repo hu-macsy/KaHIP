@@ -129,7 +129,6 @@ if( rank == ROOT ) {
                 config.evolutionary_time_limit = 0;
                 elapsed += t.elapsed();
                 MPI_Barrier(communicator);
-                
         }
 
         // if( rank == ROOT )
@@ -286,9 +285,7 @@ PRINT(std::cout << "global_ghost_nodes "<< global_ghost_nodes << " , max_ghost_n
                         //perform initial partition as normal
                         qm.set_initial_numNodes( Q.number_of_global_nodes() );
                         qm.set_initial_numEdges( Q.number_of_global_edges() );
-			// std::cout << "part> rank " << rank << " num_global_nodes = " << Q.number_of_global_nodes() << "num_global_edges = " << Q.number_of_global_edges()
-			// 	  << " num_local_nodes = " << Q.number_of_local_nodes() << "num_local_edges = " << Q.number_of_local_edges() 
-			// 	  << std::endl;
+
                         initial_partitioning_algorithm ip;
                         ip.perform_partitioning( communicator, config, Q );
                 }
@@ -318,9 +315,21 @@ PRINT(std::cout << "global_ghost_nodes "<< global_ghost_nodes << " , max_ghost_n
 
         t.restart();
 
+
+#ifndef NDEBUG
+                check_labels(communicator, config, Q);
+                Q.check_labels( config.k);
+#endif
+
         //project from coarser (Q) to finer (G)
         parallel_projection parallel_project;
         parallel_project.parallel_project( communicator, G, Q ); // contains a Barrier
+
+#ifndef NDEBUG
+                check_labels(communicator, config, G);
+                G.check_labels( config.k);
+#endif
+
 
 #ifndef NOOUTPUT
         EdgeWeight cut = qm.edge_cut(G, communicator);
@@ -334,14 +343,10 @@ PRINT(std::cout << "global_ghost_nodes "<< global_ghost_nodes << " , max_ghost_n
             NodeID local_not_part =0;
             NodeID local_part =0;
             forall_local_nodes( G, i ){
-                // if( getNodeLabel(i)<config.k ){
-                //     local_part++;
-                // }else{
-                //     local_not_part++;
-                // }
                 (G.getNodeLabel(i)<config.k) ? local_part++ : local_not_part++ ;
                 assert( G.getNodeLabel(i)<config.k );
             }endfor
+
             NodeID global_not_part;
             NodeID global_part;
             MPI_Reduce( &local_not_part, &global_not_part, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, communicator);
@@ -357,7 +362,7 @@ PRINT(std::cout << "global_ghost_nodes "<< global_ghost_nodes << " , max_ghost_n
         if (!counter) {
             EdgeWeight cut = qm.edge_cut(G, communicator);
             qm.set_initial_cut(cut);
-EdgeWeight  qap = 9999;//qm.total_qap( G, PEtree, communicator );
+            EdgeWeight qap = qm.total_qap( G, PEtree, communicator );
             qm.set_initial_qap( qap );
             #ifndef NOOUTPUT
             if( rank == ROOT ) {
@@ -530,19 +535,23 @@ void distributed_partitioner::check_labels( MPI_Comm communicator, PPartitionCon
 
                 // now integrate the changes
                 if(message_length == 1) continue; // nothing to do
-
+                /*
                 for( int i = 0; i < message_length-1; i+=2) {
                         NodeID global_id = message[i];
                         NodeID label     = message[i+1];
 
                         if(G.getNodeLabel(G.getLocalID(global_id)) != label) {
-                                std::cout <<  "labels not ok"  << std::endl;
+                                std::cout <<  "labels not ok, " <<  G.getNodeLabel(G.getLocalID(global_id)) << " != " << label << std::endl;
                                 exit(0);
                         }
                 }
+                */
         }
 
         MPI_Barrier(communicator);
+#ifndef NOOUTPUT
+        if(m_rank==ROOT){ std::cout << "\n\t\t=====>> LABEL CHECK OK  <<========\n" << std::endl;}
+#endif
 }
 
 
