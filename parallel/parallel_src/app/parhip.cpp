@@ -114,31 +114,37 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                         }
                 }
 
-                    // copy or reduce graph. This is meant to reduce the memory consumption for certain complex graphs
-                    t.restart();
-                    const NodeID global_max_degree = in_G.get_global_max_degree(communicator);
-                    const double avg_degree = in_G.number_of_global_edges()/ (double) in_G.number_of_global_nodes();
-                    if( rank == ROOT ) std::cout<<"log> max degree " << global_max_degree << " average degree " << avg_degree << std::endl;
-                    //std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_degree( avg_degree*1.5 , false);
+                // copy or reduce graph. This is meant to reduce the memory consumption for certain complex graphs
+                t.restart();
+                const NodeID global_max_degree = in_G.get_global_max_degree(communicator);
+                const double avg_degree = in_G.number_of_global_edges()/ (double) in_G.number_of_global_nodes();
+                if( rank == ROOT ) std::cout<<"log> max degree " << global_max_degree << " average degree " << avg_degree << std::endl;
+                //std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_degree( avg_degree*1.5 , false);
 
+                const NodeID numLocalNodes = partition_config.hdn_percent*in_G.number_of_global_nodes()/size;
+                std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, partition_config.use_ghost_degree );
 
-                    const NodeID numLocalNodes = partition_config.hdn_percent*in_G.number_of_global_nodes()/size;
-                    std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, partition_config.use_ghost_degree );
-                    
-                    //compute ghost edge percentage. if not too high, do not reduce graph
-                    {
-                        [[maybe_unused]] auto [globalInterEdges, globalIntraEdges, globalWeight ] = in_G.get_ghostEdges_nodeWeight();
-                        const double ghostEdgePercent =  globalInterEdges/(double)in_G.number_of_global_edges();
-                        if (rank == ROOT) std::cout << "log> ghost node percentage is " << ghostEdgePercent << ", will reduce graph if it is lower than 0.8" << std::endl;
-                        if( ghostEdgePercent<0.8 ){
-                            global_hdn.clear();
-                        }
+                //compute ghost edge percentage. if not too high, do not reduce graph
+                {
+                    [[maybe_unused]] auto [globalInterEdges, globalIntraEdges, globalWeight ] = in_G.get_ghostEdges_nodeWeight();
+                    const double bound = 0.7;
+                    const double ghostEdgePercent =  globalInterEdges/(double)in_G.number_of_global_edges();
+                    if (rank == ROOT) std::cout << "log> ghost node percentage is " << ghostEdgePercent << ", will reduce graph if it is lower than " << bound << std::endl;
+                    if( ghostEdgePercent<bound ){
+                        global_hdn.clear();
                     }
+                }
 
-                    parallel_graph_access G(communicator);
+                unsigned long long copyGraphGlob=0;
+                {
+                    unsigned long long copyGraph = global_hdn.empty() ? 0 : 1;
+                    MPI_Allreduce(&copyGraph, &copyGraphGlob, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, communicator);
+                    assert( copyGraphGlob==0 || copyGraphGlob==size ); //either 0 or 1 everywhere
+                }
 
-		if(global_hdn.empty()) {
-			
+                parallel_graph_access G(communicator);
+
+        if( copyGraphGlob==0 ){
             in_G.copy_graph(G, communicator);
 			if (rank == ROOT) {
 				std::cout << "log> Empty list of high degree nodes! " << std::endl;
@@ -149,18 +155,19 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 					  << G.number_of_global_nodes() << " number of edges "
 					  << G.number_of_global_edges() << std::endl;
 				std::cout << "log> ghost nodes, original graph " << in_G.number_of_ghost_nodes() << " copied g " << G.number_of_ghost_nodes() << std::endl;
-		    
 			}
 		} else {
 			// reducing graph
 			if( partition_config.aggressive_removal ) {
-				if (rank == ROOT)
+				if (rank == ROOT){
 					std::cout << "log> Enable aggressive removal of edges. " << std::endl;
+                }
 				in_G.reduce_graph(G, global_hdn, communicator, partition_config.aggressive_removal, partition_config.keepAllLocal);
 			}
 			else {
 				in_G.reduce_graph(G, global_hdn, communicator);
 			}
+
 			if (rank==ROOT){
 				std::cout << " ========================================= " << std::endl;
 				std::cout << " ============  Reducing graph  =========== " <<  std::endl;
@@ -170,8 +177,14 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
 					  << G.number_of_global_nodes() << " number of edges "
 					  << G.number_of_global_edges() << std::endl;
 				std::cout << "log> ghost nodes, original graph " << in_G.number_of_ghost_nodes() << " reduced g " << G.number_of_ghost_nodes() << std::endl;
-                        }
+            }
+
+            // G.update_ghost_node_data();
+            // G.update_ghost_node_data_global();
+            // G.update_ghost_node_data_finish();
 		}
+                        //update the ghost nodes of in_G
+
 		assert( G.number_of_local_nodes() == in_G.number_of_local_nodes() );    //number of nodes should be the same
 		assert( G.number_of_local_edges() <= in_G.number_of_local_edges() );    //edges are less or equal
 
@@ -313,18 +326,18 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 inter_ref_edge_cut = qm.edge_cut( in_G, communicator );
                 inter_ref_balance = qm.balance( partition_config, in_G, communicator );
 
-			PPartitionConfig working_config = partition_config;
-			working_config.vcycle = false; // assure that we actually can improve the cut
-			parallel_label_compress< std::vector< NodeWeight> > plc_refinement;
-			if (!global_hdn.empty()) {
-			  if ( rank == ROOT )
-			    std::cout << "log> LAST REFINEMENT STEP ON FINEST GRAPH " << std::endl; 
-			  plc_refinement.perform_parallel_label_compression( working_config, in_G, true, false, PEtree); // balance, for_coarsening
-			}
-		 }
-		
-		double final_refine_time = t.elapsed(); 
+                PPartitionConfig working_config = partition_config;
+                working_config.vcycle = false; // assure that we actually can improve the cut
+                parallel_label_compress< std::vector< NodeWeight> > plc_refinement;
+                if (!global_hdn.empty()) {
+                    if ( rank == ROOT ){
+                        std::cout << "log> LAST REFINEMENT STEP ON FINEST GRAPH " << std::endl; 
+                    }
+                    plc_refinement.perform_parallel_label_compression( working_config, in_G, false, false, PEtree); // balance, for_coarsening
+                    }
+                }
 
+                double final_refine_time = t.elapsed(); 
 
                 //qm.evaluateMapping(in_G, PEtree, communicator);
 
