@@ -603,6 +603,7 @@ public:
         EdgeWeight getEdgeWeight(EdgeID e); 
         void setEdgeWeight(EdgeID e, EdgeWeight weight); 
 
+        /// return local ID of the node
         NodeID getEdgeTarget(EdgeID e);
 
         //methods for non-local / ghost nodes only
@@ -670,6 +671,22 @@ public:
         }
 
         void reinit();
+
+        bool check_labels( const int k ){
+            forall_local_nodes( (*this), i ){
+                if( getNodeLabel(i)>=k ){
+                    std::cout << rank << ": " << i << " label= " << getNodeLabel(i) << ", localID " << getLocalID(i) << ", globalID " << getGlobalID(i) << std::endl; 
+                }
+                assert( getNodeLabel(i)<k );
+            }endfor
+            forall_ghost_nodes( (*this), node ){
+                if( getNodeLabel(node)>=k ){
+                    std::cout << rank << ": " << node << " label= " << getNodeLabel(node) << ", localID " << getLocalID(node) << ", globalID " << getGlobalID(node) << std::endl; 
+                }
+                assert( getNodeLabel(node)<k );
+            }endfor
+            return true;
+        }
 
         /* ============================================================= */
         /* parallel graph data structure  */

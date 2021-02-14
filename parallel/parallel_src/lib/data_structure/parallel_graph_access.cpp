@@ -354,8 +354,9 @@ outG.setNodeLabel(node,  this->getNodeLabel(node) );
 			outG.setEdgeWeight(e, weight);
 		}		
 	}
-	
-	outG.finish_construction(); 
+
+    outG.finish_construction(); 
+
 	MPI_Barrier(communicator);
 }
   
@@ -614,8 +615,8 @@ std::tuple<EdgeWeight,EdgeWeight,NodeWeight> parallel_graph_access::get_ghostEdg
     EdgeWeight globalInterEdges = 0;
     EdgeWeight globalIntraEdges = 0;
     NodeWeight globalWeight = 0;
-    MPI_Reduce(&interPEedges, &globalInterEdges, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, m_communicator);
-    MPI_Reduce(&localEdges, &globalIntraEdges, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, m_communicator);
+    MPI_Allreduce(&interPEedges, &globalInterEdges, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, m_communicator);
+    MPI_Allreduce(&localEdges, &globalIntraEdges, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, m_communicator);
     MPI_Allreduce(&localWeight, &globalWeight, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, m_communicator);
 
     return {globalInterEdges, globalIntraEdges, globalWeight };
