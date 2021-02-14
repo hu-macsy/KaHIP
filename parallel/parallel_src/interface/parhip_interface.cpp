@@ -9,6 +9,7 @@
 
 
 // 3% imbalance should be specified as imbalance = 0.03 
+template<typename idxtype>
 void ParHIPPartitionKWay(idxtype *vtxdist, idxtype *xadj, idxtype *adjncy, idxtype *vwgt, idxtype *adjwgt,
                          int *nparts, double* imbalance, bool suppress_output, int seed, int mode, int *edgecut, idxtype *part, 
                          MPI_Comm *comm) {
@@ -155,3 +156,21 @@ void ParHIPPartitionKWay(idxtype *vtxdist, idxtype *xadj, idxtype *adjncy, idxty
 
 
 }
+
+template void ParHIPPartitionKWay( unsigned long int *vtxdist, unsigned long int *xadj, unsigned long int *adjncy, unsigned long int *vwgt, unsigned long int *adjwgt,
+                         int *nparts, double* imbalance, bool suppress_output, int seed, int mode, int *edgecut, unsigned long int *part, 
+                         MPI_Comm *comm);
+
+
+template void ParHIPPartitionKWay( unsigned int *vtxdist, unsigned int *xadj, unsigned int *adjncy, unsigned int *vwgt, unsigned int *adjwgt,
+                         int *nparts, double* imbalance, bool suppress_output, int seed, int mode, int *edgecut, unsigned int *part, 
+                         MPI_Comm *comm);
+
+template void ParHIPPartitionKWay(long int *vtxdist, long int *xadj, long int *adjncy, long int *vwgt, long int *adjwgt,
+                         int *nparts, double* imbalance, bool suppress_output, int seed, int mode, int *edgecut, long int *part, 
+                         MPI_Comm *comm);
+
+
+template void ParHIPPartitionKWay(int *vtxdist, int *xadj, int *adjncy, int *vwgt, int *adjwgt,
+                         int *nparts, double* imbalance, bool suppress_output, int seed, int mode, int *edgecut, int *part, 
+                         MPI_Comm *comm);
