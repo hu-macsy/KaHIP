@@ -36,6 +36,7 @@ inline void configuration::fast( PPartitionConfig & partition_config ) {
         partition_config.initial_partitioning_algorithm  = KAFFPAEULTRAFASTSNW;
         partition_config.no_refinement_in_last_iteration = true;
         partition_config.stop_factor                     = 18000;
+        partition_config.ignore_PEtree                   = true;
 }
 
 inline void configuration::eco( PPartitionConfig & partition_config ) {

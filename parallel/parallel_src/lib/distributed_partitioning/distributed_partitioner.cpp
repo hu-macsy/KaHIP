@@ -213,24 +213,24 @@ void distributed_partitioner::vcycle(
 
 #ifndef NOOUTPUT
 
-{
-NodeID global_ghost_nodes = 0;
-NodeID G_local_ghost_nodes = G.number_of_ghost_nodes();
-NodeID G_local_nodes = G.number_of_local_nodes();
-NodeID G_all_local_data = G_local_nodes+G_local_ghost_nodes;
-NodeID max_ghost_nodes = 0;
-NodeID max_local_nodes = 0;
-NodeID max_all_local_nodes = 0;
-MPI_Reduce(&G_local_ghost_nodes, &global_ghost_nodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, communicator);
-MPI_Reduce(&G_local_ghost_nodes, &max_ghost_nodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, ROOT, communicator);
-MPI_Reduce(&G_local_nodes, &max_local_nodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, ROOT, communicator);
-MPI_Reduce(&G_all_local_data, &max_all_local_nodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, ROOT, communicator);
-        if( rank == ROOT ) {
-                std::cout <<  "log>cycle: " << m_cycle << " level: " << m_level << " contraction took " <<  t.elapsed() << std::endl;
-                std::cout <<  "log>cycle: " << m_cycle << " level: " << m_level << " coarse nodes n=" << Q.number_of_global_nodes() << ", coarse edges m=" << Q.number_of_global_edges() << " ghost nodes n=" << Q.number_of_ghost_nodes()<< std::endl;
-PRINT(std::cout << "global_ghost_nodes "<< global_ghost_nodes << " , max_ghost_nodes " << max_ghost_nodes << ", max_local_nodes " << max_local_nodes << ", max_all_local_nodes "<< max_all_local_nodes << std::endl;)
+        {
+                NodeID global_ghost_nodes = 0;
+                NodeID G_local_ghost_nodes = G.number_of_ghost_nodes();
+                NodeID G_local_nodes = G.number_of_local_nodes();
+                NodeID G_all_local_data = G_local_nodes+G_local_ghost_nodes;
+                NodeID max_ghost_nodes = 0;
+                NodeID max_local_nodes = 0;
+                NodeID max_all_local_nodes = 0;
+                MPI_Reduce(&G_local_ghost_nodes, &global_ghost_nodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, communicator);
+                MPI_Reduce(&G_local_ghost_nodes, &max_ghost_nodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, ROOT, communicator);
+                MPI_Reduce(&G_local_nodes, &max_local_nodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, ROOT, communicator);
+                MPI_Reduce(&G_all_local_data, &max_all_local_nodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, ROOT, communicator);
+                if( rank == ROOT ) {
+                        std::cout <<  "log>cycle: " << m_cycle << " level: " << m_level << " contraction took " <<  t.elapsed() << std::endl;
+                        std::cout <<  "log>cycle: " << m_cycle << " level: " << m_level << " coarse nodes n=" << Q.number_of_global_nodes() << ", coarse edges m=" << Q.number_of_global_edges() << " ghost nodes n=" << Q.number_of_ghost_nodes()<< std::endl;
+                        PRINT(std::cout << "global_ghost_nodes "<< global_ghost_nodes << " , max_ghost_nodes " << max_ghost_nodes << ", max_local_nodes " << max_local_nodes << ", max_all_local_nodes "<< max_all_local_nodes << std::endl;)
+                }
         }
-}
 #endif
 
         if( !contraction_stop_decision.contraction_stop(config, G, Q)) {
@@ -338,24 +338,6 @@ PRINT(std::cout << "global_ghost_nodes "<< global_ghost_nodes << " , max_ghost_n
                 std::cout <<  "log>cycle: " << m_cycle << " level: " << m_level << " projection took " <<  t.elapsed() << ", cut is " << cut << " and balance " << bal << std::endl;
         }
 
-        {
-            //count not partitioned nodes
-            NodeID local_not_part =0;
-            NodeID local_part =0;
-            forall_local_nodes( G, i ){
-                (G.getNodeLabel(i)<config.k) ? local_part++ : local_not_part++ ;
-                assert( G.getNodeLabel(i)<config.k );
-            }endfor
-
-            NodeID global_not_part;
-            NodeID global_part;
-            MPI_Reduce( &local_not_part, &global_not_part, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, communicator);
-            MPI_Reduce( &local_part, &global_part, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, ROOT, communicator);
-            if( rank == ROOT ) {
-                std::cout << "-> -> -> -> globally not partitioned nodes " << global_not_part << ", partitioned " << global_part << std::endl;
-            }
-
-        }
 #endif
 
         static int counter = 0;
@@ -386,7 +368,7 @@ PRINT(std::cout << "global_ghost_nodes "<< global_ghost_nodes << " , max_ghost_n
                 working_config.vcycle = false; // assure that we actually can improve the cut
 
                 parallel_label_compress< std::vector< NodeWeight> > plc_refinement;
-                plc_refinement.perform_parallel_label_compression( working_config, G, false, false, PEtree);
+                plc_refinement.perform_parallel_label_compression( working_config, G, true, false, PEtree);
         }
 
         // after refinement
@@ -550,7 +532,7 @@ void distributed_partitioner::check_labels( MPI_Comm communicator, PPartitionCon
 
         MPI_Barrier(communicator);
 #ifndef NOOUTPUT
-        if(m_rank==ROOT){ std::cout << "\n\t\t=====>> LABEL CHECK OK  <<========\n" << std::endl;}
+        if(m_rank==ROOT){ std::cout << "\t\t=====>> LABEL CHECK OK  <<========" << std::endl;}
 #endif
 }
 

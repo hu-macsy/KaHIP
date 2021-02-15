@@ -160,8 +160,8 @@ class parallel_label_compress {
                                 if( usePEdistances || !for_coarsening ){
                                     G.check_labels( config.k );
                                 }
+                                //std::cout << "in iteration round " << i << ", we moved " << numChanges << " vertices" <<std::endl;
 #endif
-                                std::cout << "in iteration round " << i << ", we moved " << numChanges << " vertices" <<std::endl;
                                 G.update_ghost_node_data_finish(); 
                                 //std::cout << "updated ghost nodes" << std::endl;
                                 //if(rank==ROOT){
