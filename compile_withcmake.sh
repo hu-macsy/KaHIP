@@ -11,7 +11,7 @@ if [[ "$unamestr" == "Darwin" ]]; then
 fi
  
 rm -rf deploy
-rm -rf build
+#rm -rf build
 mkdir build
 cd build
 if [ "$1" == "BUILDPYTHONMODULE" ]; then

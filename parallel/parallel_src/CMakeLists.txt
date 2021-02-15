@@ -16,6 +16,7 @@ set(LIBPARALLEL_SOURCE_FILES
   lib/data_structure/balance_management.cpp
   lib/data_structure/balance_management_refinement.cpp
   lib/data_structure/balance_management_coarsening.cpp
+  lib/data_structure/processor_tree.cpp
   lib/parallel_label_compress/node_ordering.cpp
   lib/parallel_contraction_projection/parallel_contraction.cpp
   lib/parallel_contraction_projection/parallel_block_down_propagation.cpp
