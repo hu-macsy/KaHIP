@@ -11,9 +11,9 @@
 #include "definitions.h"
 
 // Configuration for the partitioning.
-struct PPartitionConfig
+struct PartitionConfig
 {
-        PPartitionConfig() {}
+        PartitionConfig() {}
 
         //=======================================
         //============ Graph Gen=================

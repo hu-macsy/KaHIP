@@ -18,12 +18,13 @@
 #include "communication/mpi_tools.h"
 #include "communication/dummy_operations.h"
 #include "data_structure/parallel_graph_access.h"
+#include "data_structure/processor_tree.h"
 #include "distributed_partitioning/distributed_partitioner.h"
 #include "io/parallel_graph_io.h"
 #include "io/parallel_vector_io.h"
 #include "macros_assertions.h"
 #include "parse_parameters.h"
-#include "partition_config.h"
+#include "ppartition_config.h"
 #include "random_functions.h"
 #include "timer.h"
 #include "tools/distributed_quality_metrics.h"
@@ -82,12 +83,23 @@ int main(int argn, char **argv) {
                 if( rank == ROOT ) std::cout <<  "took " <<  t.elapsed()  << std::endl;
                 if( rank == ROOT ) std::cout <<  "n:" <<  G.number_of_global_nodes() << " m: " <<  G.number_of_global_edges()  << std::endl;
 
+                //
+                // mapping activity : read processor tree if given 
+                //
+                processor_tree PEtree( partition_config.distances, partition_config.group_sizes );
+                if( rank == ROOT ) {
+                        PEtree.print();
+                        if( PEtree.get_numPUs()<11){
+                                PEtree.print_allPairDistances();
+                        }
+                }
+                
                 random_functions::setSeed(partition_config.seed);
                 parallel_graph_access::set_comm_rounds( partition_config.comm_rounds/size );
                 parallel_graph_access::set_comm_rounds_up( partition_config.comm_rounds/size);
                 distributed_partitioner::generate_random_choices( partition_config );
 
-                G.printMemoryUsage(std::cout);
+                //G.printMemoryUsage(std::cout);
 
                 //compute some stats
                 EdgeWeight interPEedges = 0;

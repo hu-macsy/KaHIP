@@ -11,7 +11,13 @@
 
 #include <regex.h>
 #include <string.h>
+
 #include "configuration.h"
+
+// #include "data_structure/matrix/online_distance_matrix.h"
+// #include "data_structure/matrix/online_precalc_matrix.h"
+// #include "data_structure/matrix/online_binary_matrix.h"
+// #include "data_structure/matrix/full_matrix.h"
 
 int parse_parameters(int argn, char **argv, 
                      PPartitionConfig & partition_config, 
@@ -22,13 +28,14 @@ int parse_parameters(int argn, char **argv,
         // Setup argtable parameters.
         struct arg_lit *help                           = arg_lit0(NULL, "help","Print help.");
         struct arg_str *filename                       = arg_str1(NULL, NULL, "FILE", "Path to graph file to partition.");
+        struct arg_str *filename_output                = arg_str0(NULL, "filename_output", NULL, "Specify the name of the output file (that contains the partition).");
         struct arg_str *input_partition_filename       = arg_str1(NULL, "input_partition", "FILE", "Path to partition file to convert.");
         struct arg_int *user_seed                      = arg_int0(NULL, "seed", NULL, "Seed to use for the PRNG.");
         struct arg_int *k                              = arg_int1(NULL, "k", NULL, "Number of blocks to partition the graph.");
         struct arg_int *k_opt                          = arg_int0(NULL, "k", NULL, "Number of blocks to partition the graph.");
         struct arg_int *inbalance                      = arg_int0(NULL, "imbalance", NULL, "Desired balance. Default: 3 (%).");
         struct arg_int *comm_rounds                    = arg_int0(NULL, "comm_rounds", NULL, "Number of communication rounds per complete graph iteration.");
-        struct arg_dbl *cluster_coarsening_factor      = arg_dbl0(NULL, "cluster_coarsening_factor", NULL, "The coarsening factor basically involes a bound on the block weights.");
+        struct arg_dbl *cluster_coarsening_factor      = arg_dbl0(NULL, "cluster_coarsening_factor", NULL, "The coarsening factor basically involves a bound on the block weights.");
         struct arg_int *stop_factor                    = arg_int0(NULL, "stop_factor", NULL, "Stop factor l to stop coarsening if total num vert <= lk.");
         struct arg_int *evolutionary_time_limit        = arg_int0(NULL, "evolutionary_time_limit", NULL, "Time limit for the evolutionary algorithm.");
 #ifndef TOOLBOX
@@ -37,7 +44,7 @@ int parse_parameters(int argn, char **argv,
         struct arg_int *label_iterations_refinement    = arg_int0(NULL, "label_iterations_refinement", NULL, "Number of label propagation iterations during refinement.");
         struct arg_int *num_tries                      = arg_int0(NULL, "num_tries", NULL, "Number of repetitions to perform.");
         struct arg_int *binary_io_window_size 	       = arg_int0(NULL, "binary_io_window_size", NULL, "Binary IO window size.");
-        struct arg_rex *initial_partitioning_algorithm = arg_rex0(NULL, "initial_partitioning_algorithm", "^(kaffpaEstrong|kaffpaEeco|kaffpaEfast|fastsocial|ecosocial|strongsocial|random)$", "PARTITIONER", REG_EXTENDED, "Initial partitioning algorithm to use. One of {kaffpaEstrong, kaffpaEeco, kaffpaEfast, fastsocial, ecosocial, strongsocial, random)." );
+        struct arg_rex *initial_partitioning_algorithm = arg_rex0(NULL, "initial_partitioning_algorithm", "^(kaffpaEstrong|kaffpaEeco|kaffpaEfast|fastsocial|ecosocial|strongsocial|random)$", "PARTITIONER", REG_EXTENDED, "Initial partitioning algorithm to use. One of {kaffpaEstrong, kaffpaEeco, kaffpaEfast, fastsocial, ecosocial, strongsocial, random}." );
         struct arg_int *num_vcycles                    = arg_int0(NULL, "num_vcycles", NULL, "Number of vcycles to perform.");
         struct arg_lit *no_refinement_in_last_iteration= arg_lit0(NULL, "no_refinement_in_last_iteration","No local search during last v-cycle.");
         struct arg_lit *converter_evaluate             = arg_lit0(NULL, "evaluate","Enable this tag the partition to be evaluated.");
@@ -45,16 +52,35 @@ int parse_parameters(int argn, char **argv,
         struct arg_lit *save_partition_binary	       = arg_lit0(NULL, "save_partition_binary","Enable this tag if you want to store the partition to disk in a binary format.");
         struct arg_lit *vertex_degree_weights          = arg_lit0(NULL, "vertex_degree_weights","Use 1+deg(v) as vertex weights.");
         struct arg_rex *node_ordering                  = arg_rex0(NULL, "node_ordering", "^(random|degree|leastghostnodesfirst_degree|degree_leastghostnodesfirst)$", "VARIANT", REG_EXTENDED, "Type of node ordering to use for the clustering algorithm. (Default: degree) [random|degree|leastghostnodesfirst_degree|degree_leastghostnodesfirst]." );
-        struct arg_rex *preconfiguration               = arg_rex1(NULL, "preconfiguration", "^(ecosocial|fastsocial|ultrafastsocial|ecomesh|fastmesh|ultrafastmesh)$", "VARIANT", REG_EXTENDED, "Use a preconfiguration. (Default: fast) [ecosocial|fastsocial|ultrafastsocial|ecomesh|fastmesh|ultrafastmesh]." );
+        struct arg_rex *preconfiguration               = arg_rex1(NULL, "preconfiguration", "^(ecosocial|fastsocial|ultrafastsocial|mappingsocial|ecomesh|fastmesh|ultrafastmesh|mappingmesh)$", "VARIANT", REG_EXTENDED, "Use a preconfiguration. (Default: fast) [ecosocial|fastsocial|ultrafastsocial|mappingsocial|ecomesh|fastmesh|ultrafastmesh|mappingmesh]." );
         struct arg_dbl *ht_fill_factor                 = arg_dbl0(NULL, "ht_fill_factor", NULL, "");
         struct arg_int *n                              = arg_int0(NULL, "n", NULL, "");
         struct arg_end *end                            = arg_end(100);
 
+        //integrated mapping
+        //
+
+        //struct arg_lit *integrated_mapping                   = arg_lit0(NULL, "integrated_mapping", "Enable integrated mapping algorithms to map quotient graph onto processor graph defined by hierarchy and distance options. (Default: disabled)");
+        struct arg_str *hierarchy_parameter_string           = arg_str0(NULL, "hierarchy_parameter_string", NULL, "Specify as 4:8:8 for 4 cores per PE, 8 PEs per rack, ... and so forth; in total 4x8x8=256 PEs. The first number describes the bottom level, i.e. the leaves and each number a level above. ");
+        struct arg_str *distance_parameter_string            = arg_str0(NULL, "distance_parameter_string", NULL, "Specify as 1:10:100 if cores on the same chip have distance 1, PEs in the same rack have distance 10, ... and so forth. The first number describes the bottom level, i.e. the leaves and each number a level above.");
+        struct arg_lit *only_boundary                        = arg_lit0(NULL, "only_boundary", "when refinement, move boundary vertices only" );
+        struct arg_int *max_coarsening_levels                = arg_int0(NULL, "max_coarsening_levels", NULL, "Max number of coarsening levels to perform.");
+        struct arg_lit *ignore_PEtree                        = arg_lit0(NULL, "ignore_PEtree", "Even if the PE tree is given, ignore it during refinement; used to measure the qap metrics when a PE tree exists but it is ignored" );
+        struct arg_int *update_step_size                     = arg_int0(NULL, "update_step_size", NULL, "Every how many nodes to update ghost nodes.");
+        struct arg_lit *adjustable_update_step               = arg_lit0(NULL, "adjustable_update_step", "When coarsening/refining,  automatically adjust the update step" );
+        struct arg_lit *aggressive_removal                   = arg_lit0(NULL, "aggressive_removal","Enable aggressive removal of edges that will be reintroduced (to manage memory issues).");
+        struct arg_lit *keepAllLocal                         = arg_lit0(NULL, "keepAllLocal","used when reducing graph; when activated we keep all local edges");
+        struct arg_dbl *hdn_percent                          = arg_dbl0(NULL, "hdn_percent", NULL, "High degree nodes percentage (from global nodes) to remove edges from. Value range 0<= x < 1. Default is 0.2.");
+        struct arg_lit *use_ghost_degree                     = arg_lit0(NULL, "use_ghost_degree", "Used when picking high degree nodes to remove edges. If false, we use the normal degree of a node. If true, we pick nodes based on their ghost-degree, i.e. the number of ghost neighbors they have.");
+
         // Define argtable.
         void* argtable[] = {
 #ifdef PARALLEL_LABEL_COMPRESSION
-                help, filename, user_seed, k, inbalance, preconfiguration, vertex_degree_weights,
-		save_partition, save_partition_binary,
+	  help, filename, filename_output, user_seed, k, inbalance, preconfiguration, vertex_degree_weights,
+	  save_partition, save_partition_binary, hierarchy_parameter_string, distance_parameter_string, aggressive_removal, keepAllLocal,
+	  only_boundary, num_vcycles, label_iterations_refinement, label_iterations_coarsening, stop_factor,
+	  no_refinement_in_last_iteration, cluster_coarsening_factor, max_coarsening_levels, ignore_PEtree, 
+	  update_step_size, adjustable_update_step, hdn_percent, use_ghost_degree,
 #elif defined TOOLBOX 
                 help, filename, k_opt, input_partition_filename, save_partition, save_partition_binary, converter_evaluate,
 #endif 
@@ -138,6 +164,20 @@ int parse_parameters(int argn, char **argv,
                 } else if (strcmp("ultrafastmesh", preconfiguration->sval[0]) == 0) {
                         cfg.ultrafast(partition_config);
                         partition_config.cluster_coarsening_factor = 20000;
+                } else if (strcmp("mappingmesh", preconfiguration->sval[0]) == 0 || strcmp("mappingsocial", preconfiguration->sval[0]) == 0 ) {
+                        cfg.mapping(partition_config);
+                        if(stop_factor->count > 0) {
+                                partition_config.stop_factor = stop_factor->ival[0];
+                        }else{
+                                partition_config.stop_factor = 0;
+                        }
+                        if (strcmp("mappingmesh", preconfiguration->sval[0]) == 0){
+                                partition_config.coarsening_factor = 3;
+                                //partition_config.max_coarsening_levels = 6;
+                        }else{ //social
+                                partition_config.coarsening_factor = 30;
+                                //partition_config.max_coarsening_levels = 6;
+                        }
                 } else {
                         fprintf(stderr, "Invalid preconfconfiguration variant: \"%s\"\n", preconfiguration->sval[0]);
                         exit(0);
@@ -156,9 +196,17 @@ int parse_parameters(int argn, char **argv,
 		partition_config.save_partition = true;
 	}
 
+	if(filename_output->count > 0) {
+	        partition_config.filename_output = filename_output->sval[0];
+        }
+
 	if(save_partition_binary->count > 0) {
 		partition_config.save_partition_binary = true;
 	}
+
+        if(hdn_percent->count > 0) {
+                partition_config.hdn_percent = hdn_percent->dval[0];
+        }
 
         if(n->count > 0) {
                 partition_config.n = pow(10,n->ival[0]);
@@ -182,6 +230,18 @@ int parse_parameters(int argn, char **argv,
 
         if (num_vcycles->count > 0) {
                 partition_config.num_vcycles = num_vcycles->ival[0];
+        }
+        
+        if (max_coarsening_levels->count > 0) {
+                partition_config.max_coarsening_levels = max_coarsening_levels->ival[0];
+        }
+  
+        if (update_step_size->count > 0) {
+                partition_config.update_step_size = update_step_size->ival[0];
+        }
+        
+        if (adjustable_update_step->count > 0) {
+                partition_config.adjustable_update_step = true;
         }
 
         if (comm_rounds->count > 0) {
@@ -222,6 +282,8 @@ int parse_parameters(int argn, char **argv,
 
         if(no_refinement_in_last_iteration->count > 0) {
                 partition_config.no_refinement_in_last_iteration = true;
+        }else{
+                partition_config.no_refinement_in_last_iteration = false;
         }
 
         if(initial_partitioning_algorithm->count > 0) {
@@ -260,6 +322,116 @@ int parse_parameters(int argn, char **argv,
                 }
         }
 
+        //
+        // integrated mapping
+        //
+        partition_config.integrated_mapping = false;
+
+        //check and store the hierarchy levels in partition_config.group_sizes
+        if(hierarchy_parameter_string->count) {
+                std::istringstream f(hierarchy_parameter_string->sval[0]);
+                std::string s;    
+                partition_config.group_sizes.clear();
+                while (getline(f, s, ':')) {
+                        partition_config.group_sizes.push_back(stoi(s));
+                }       
+
+                PartitionID old_k = partition_config.k;
+                partition_config.k = 1; // recompute k 
+                for( unsigned int i = 0; i < partition_config.group_sizes.size(); i++) {
+                        partition_config.k *= partition_config.group_sizes[i];
+                }
+                if( old_k != partition_config.k ) {
+                        std::cout <<  "number of processors defined through specified hierarchy does not match k!"  << std::endl;
+                        std::cout <<  "please specify k as " << partition_config.k  << std::endl;
+                        exit(0);
+                }
+        }
+
+        //store the PE tree distances in partition_config.distances
+        if(distance_parameter_string->count) {
+                std::istringstream f(distance_parameter_string->sval[0]);
+                std::string s;    
+                partition_config.distances.clear();
+                while (getline(f, s, ':')) {
+                        partition_config.distances.push_back(stoi(s));
+                }       
+        }
+
+        if( partition_config.distances.size()!=partition_config.group_sizes.size() ){
+            std::cout << "ERROR: distances and hierarchy for the processor tree should have the same size " << std::endl;
+            std::cout<< partition_config.distances.size() << " vs " << partition_config.group_sizes.size() <<std::endl;
+            exit(0);
+        }else{
+            if( partition_config.distances.size()>0 ){
+                partition_config.integrated_mapping = true;
+            }
+        }
+        
+        if( only_boundary->count ){
+            partition_config.only_boundary = true;
+        }
+        if( ignore_PEtree->count ){
+            partition_config.ignore_PEtree = true;
+        }
+
+        if(keepAllLocal->count > 0) {
+            partition_config.keepAllLocal = true;
+        }
+        if(aggressive_removal->count > 0) {
+            partition_config.aggressive_removal = true;
+        }
+        if(use_ghost_degree->count > 0) {
+            partition_config.use_ghost_degree = true;
+        }
+
+//next lines appear in main() at the SEA_mapping code; not sure if (and why) we need them
+//see for example SEA_mapping/app/fastmesh.cpp
+/*
+        
+        std::vector< NodeID > *perm_rank = NULL;
+        if (partition_config.enable_mapping || partition_config.integrated_mapping) {
+                perm_rank = new std::vector< NodeID >(partition_config.k);
+                for( unsigned i = 0; i < perm_rank->size(); i++) {
+                        (*perm_rank)[i] = i;
+                }
+                partition_config.perm_rank = perm_rank;
+        }
+*/
+
+//next lines are also taken from SEA_mapping/app/fastmesh.cpp
+
+/*
+        matrix* D=NULL;
+        
+        if ( partition_config.integrated_mapping ){
+                //commenting this out so I do not need to add construction_algorithm to partition config
+                //bool power_of_two = (partition_config.k & (partition_config.k-1)) == 0;
+                // if (power_of_two  // && !partition_config.enable_mapping && !partition_config.multisection 
+                // ) {
+                //         partition_config.construction_algorithm = MAP_CONST_IDENTITY;
+                // }
+                
+
+                if (partition_config.use_bin_id) {
+                        D = new online_precalc_matrix(partition_config.k, partition_config.k);
+                        D->setPartitionConfig(partition_config);
+                } else if (partition_config.use_compact_bin_id) {
+                        D = new online_binary_matrix(partition_config.k, partition_config.k);
+                        D->setPartitionConfig(partition_config);
+                } else if (partition_config.full_matrix) {
+                        D = new full_matrix(partition_config.k, partition_config.k);
+                        D->setPartitionConfig(partition_config);
+                } else  
+                        if( partition_config.distance_construction_algorithm != DIST_CONST_HIERARCHY_ONLINE) {
+                                D = new normal_matrix(partition_config.k, partition_config.k);
+                        } else {
+                                D = new online_distance_matrix(partition_config.k, partition_config.k);
+                                D->setPartitionConfig(partition_config);
+                        }
+                partition_config.D = D;
+        }
+*/
 
         return 0;
 }

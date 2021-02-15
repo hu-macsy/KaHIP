@@ -133,7 +133,7 @@ struct PPartitionConfig
 
         std::vector< int > group_sizes;
         std::vector< int > distances;
-        DistanceConstructionAlgorithm distance_construction_algorithm;
+        //DistanceConstructionAlgorithm distance_construction_algorithm;
 
 
   
