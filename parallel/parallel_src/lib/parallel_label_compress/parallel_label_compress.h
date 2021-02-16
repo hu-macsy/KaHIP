@@ -64,7 +64,7 @@ class parallel_label_compress {
 
                         if(rank==ROOT){
                             std::cout << "log> in label compression, number of nodes: "<< G.number_of_global_nodes()
-                                    << ", usePEdistances " << usePEdistances << ", only_boundary " << config.only_boundary << std::endl;
+                                    << ", usePEdistances " << usePEdistances << std::endl;
                             std::cout <<"log> will do " << config.label_iterations << " rounds of label propagation" << std::endl;
                         }
 
@@ -170,8 +170,8 @@ class parallel_label_compress {
                                 //
                                 //uncomment to display memory usage
                                 //
-                                [[maybe_unused]] double myMem;
-                                getFreeRam(MPI_COMM_WORLD, myMem, true);
+                                //[[maybe_unused]] double myMem;
+                                //getFreeRam(MPI_COMM_WORLD, myMem, true);
                                 //
 
                         }//for( ULONG i = 0; i < config.label_iterations; i++)
@@ -179,9 +179,11 @@ class parallel_label_compress {
                         double max_update_time = 0.0;
                         MPI_Reduce(&total_ghost_update_time, &max_update_time, 1, MPI_DOUBLE, MPI_MAX, ROOT, MPI_COMM_WORLD);
                         
-                        if(rank==ROOT ){
-                                std::cout << "log> update ghost was called " << num_update_calls << " times and elapsed time was " << max_update_time << std::endl;
-                        }
+                        // if(rank==ROOT ){
+                        //         std::cout << "log> update ghost was called " << num_update_calls << " times and elapsed time was " << max_update_time << std::endl;
+                        // }
+                        [[maybe_unused]] double myMem;
+                        getFreeRam(MPI_COMM_WORLD, myMem, true);
                         
                 }//void perform_parallel_label_compression()
 

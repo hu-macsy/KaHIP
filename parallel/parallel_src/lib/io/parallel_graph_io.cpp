@@ -592,7 +592,7 @@ int parallel_graph_io::readGraphBinary(PPartitionConfig & config, parallel_graph
                         to = std::min(to, n-1);
 
                         ULONG local_no_nodes = to - from + 1;
-                        std::cout <<  "peID " <<  peID <<  " from " <<  from <<  " to " <<  to  <<  " amount " <<  local_no_nodes << std::endl;
+                        //std::cout <<  "peID " <<  peID <<  " from " <<  from <<  " to " <<  to  <<  " amount " <<  local_no_nodes << std::endl;
 
                         // read the offsets
                         ULONG start_pos = (header_count + from)*(sizeof(ULONG));

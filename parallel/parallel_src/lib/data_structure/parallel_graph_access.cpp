@@ -196,9 +196,9 @@ void parallel_graph_access::reduce_edges_aggressive(
 		}
 	} endfor
 
-	    if(numIsolatedHdnodes > 0 || numIsolatedNodes > 0){
-	      std::cout << "WARNING, rank " << rank << " now has isolated " << numIsolatedHdnodes << " (high degree) nodes and " << numIsolatedNodes  << " normal nodes. " <<  std::endl; 
-	    }
+	    // if(numIsolatedHdnodes > 0 || numIsolatedNodes > 0){
+	    //   std::cout << "WARNING, rank " << rank << " now has isolated " << numIsolatedHdnodes << " (high degree) nodes and " << numIsolatedNodes  << " normal nodes. " <<  std::endl; 
+	    // }
 	    
 }
 
@@ -281,9 +281,9 @@ void parallel_graph_access::reduce_edges(
 	        }
 	} endfor
 
-	    if(numIsolatedHdnodes > 0){
-	      std::cout << "WARNING, rank " << rank << " now has " << numIsolatedHdnodes << " isolated (high degree) nodes " <<  std::endl; 
-	    }
+	    // if(numIsolatedHdnodes > 0){
+	    //   std::cout << "WARNING, rank " << rank << " now has " << numIsolatedHdnodes << " isolated (high degree) nodes " <<  std::endl; 
+	    // }
 
 
 }
