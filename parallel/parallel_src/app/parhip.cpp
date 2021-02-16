@@ -121,16 +121,26 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                 if( rank == ROOT ) std::cout<<"log> max degree " << global_max_degree << " average degree " << avg_degree << std::endl;
                 //std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_degree( avg_degree*1.5 , false);
 
-                const NodeID numLocalNodes = partition_config.hdn_percent*in_G.number_of_global_nodes()/size;
-                std::vector<NodeID> global_hdn = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, partition_config.use_ghost_degree );
-
+                
+                std::vector<NodeID> global_hdn; // = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, partition_config.use_ghost_degree );
+                NodeID numLocalNodes = 0;
                 //compute ghost edge percentage. if not too high, do not reduce graph
                 {
                     [[maybe_unused]] auto [globalInterEdges, globalIntraEdges, globalWeight ] = in_G.get_ghostEdges_nodeWeight();
-                    const double bound = 0.7;
-                    const double ghostEdgePercent =  globalInterEdges/(double)in_G.number_of_global_edges();
-                    if (rank == ROOT) std::cout << "log> ghost node percentage is " << ghostEdgePercent << ", will reduce graph if it is lower than " << bound << std::endl;
-                    if( ghostEdgePercent<bound ){
+                    const double ghostEdgePercent = globalInterEdges/(double)in_G.number_of_global_edges();
+                    const double bound = 0.8;
+                    const double max_percent = 0.7;
+                    const double min_percent = 0.1;
+                    double hdnPerc = ghostEdgePercent>bound ? (ghostEdgePercent-bound)/(1-bound) *(max_percent-min_percent) + min_percent : 0     ;
+                    //activate when hdn is negative
+                    if( partition_config.hdn_percent>0 ){
+                        hdnPerc = partition_config.hdn_percent;
+                    }
+                    numLocalNodes = hdnPerc*in_G.number_of_global_nodes()/size;
+                    global_hdn = in_G.get_high_degree_global_nodes_by_num( numLocalNodes, partition_config.use_ghost_degree );
+
+                    if (rank == ROOT) std::cout << "log> ghost node percentage is " << ghostEdgePercent << ", will reduce graph if it is lower than " << bound << " and auto percent is " <<  hdnPerc << std::endl;
+                    if( hdnPerc==0 ){
                         global_hdn.clear();
                     }
                 }
