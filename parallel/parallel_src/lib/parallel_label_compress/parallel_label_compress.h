@@ -50,7 +50,7 @@ class parallel_label_compress {
 
                         //use distance if integrated mapping is activated and we do uncoarsening
                         //and we do not ignore the tree
-                        const bool usePEdistances = !for_coarsening && config.integrated_mapping && !config.ignore_PEtree ? true : false ;
+                        const bool usePEdistances = !for_coarsening && config.integrated_mapping && !config.ignore_PEtree; 
 
                         //checks, keep?
                         if( usePEdistances ){
@@ -158,7 +158,7 @@ class parallel_label_compress {
 
 #ifndef NDEBUG
                                 if( usePEdistances || !for_coarsening ){
-                                    G.check_labels( config.k );
+                                        G.check_labels( config.k );
                                 }
                                 //std::cout << "in iteration round " << i << ", we moved " << numChanges << " vertices" <<std::endl;
 #endif
