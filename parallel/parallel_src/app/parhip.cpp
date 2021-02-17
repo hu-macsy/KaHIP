@@ -129,7 +129,7 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                     [[maybe_unused]] auto [globalInterEdges, globalIntraEdges, globalWeight ] = in_G.get_ghostEdges_nodeWeight();
                     const double ghostEdgePercent = globalInterEdges/(double)in_G.number_of_global_edges();
                     const double bound = 0.8;
-                    const double max_percent = 0.7;
+                    const double max_percent = 0.5;
                     const double min_percent = 0.1;
                     double hdnPerc = ghostEdgePercent>bound ? (ghostEdgePercent-bound)/(1-bound) *(max_percent-min_percent) + min_percent : 0     ;
                     //activate when hdn is negative
@@ -340,12 +340,12 @@ getFreeRam(MPI_COMM_WORLD, myMem, true);
                             std::cout << "log>    LAST REFINEMENT STEP ON FINEST GRAPH " << std::endl; 
                             std::cout<< "log> project partition to original graph, cut "<< inter_ref_edge_cut << " , balance " << inter_ref_balance << " , epsilon " << epsilonScope << std::endl;
                         }
-                        for( int extraRefR=0; extraRefR<3; extraRefR++){
+                        for( int extraRefR=0; extraRefR<2; extraRefR++){
                             PPartitionConfig working_config = partition_config;
                             working_config.vcycle = false; // assure that we actually can improve the cut
                             parallel_label_compress< std::vector< NodeWeight> > plc_refinement;
                             
-                            plc_refinement.perform_parallel_label_compression( working_config, in_G, extraRefR==0, false, PEtree); // balance, for_coarsening
+                            plc_refinement.perform_parallel_label_compression( working_config, in_G, true, false, PEtree); // balance, for_coarsening
                             
                             inter_ref_edge_cut = qm.edge_cut( in_G, communicator );
                             inter_ref_balance = qm.balance( partition_config, in_G, communicator );
